@@ -3,7 +3,6 @@ package dev.assignment.controller;
 import java.io.File;
 import java.util.List;
 
-import dev.assignment.model.Resource;
 import dev.assignment.service.RAGService;
 import dev.assignment.service.ResourceService;
 import dev.assignment.view.ProgressDialog;

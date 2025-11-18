@@ -3,7 +3,6 @@ package dev.assignment.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.scene.control.TextInputDialog;
 

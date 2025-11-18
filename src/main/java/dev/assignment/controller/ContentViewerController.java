@@ -7,7 +7,6 @@ import dev.assignment.view.AlertHelper;
 import dev.assignment.view.ProgressDialog;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
