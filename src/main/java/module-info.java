@@ -1,12 +1,13 @@
 module dev.assignment {
-    requires javafx.controls;
-    requires javafx.fxml;
-    requires langchain4j.open.ai; // must add langchain4j references
-    requires langchain4j.core;
-    requires langchain4j;
-    requires org.apache.logging.log4j; // must add log4j references
-    requires org.slf4j; // must add slf4j
-    requires java.net.http; // needed if HttpTimeoutException occurs
+    requires transitive javafx.controls;
+    requires transitive javafx.fxml;
+    requires transitive javafx.graphics;
+    requires transitive langchain4j.open.ai; // must add langchain4j references
+    requires transitive langchain4j.core;
+    requires transitive langchain4j;
+    requires transitive org.apache.logging.log4j; // must add log4j references
+    requires transitive org.slf4j; // must add slf4j
+    requires transitive java.net.http; // needed if HttpTimeoutException occurs
     requires com.fasterxml.jackson.core; // needed if assistant is null
 
     // Apache POI for document text extraction
@@ -30,6 +31,7 @@ module dev.assignment {
     // Export packages for internal module access
     exports dev.assignment;
     exports dev.assignment.controller;
+    exports dev.assignment.handler;
     exports dev.assignment.model;
     exports dev.assignment.service;
     exports dev.assignment.view;

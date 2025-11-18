@@ -1,11 +1,10 @@
-package dev.assignment.controller;
+package dev.assignment.util;
 
 import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import dev.assignment.service.ResourceService;
-import dev.assignment.util.Constants;
 
 /**
  * Handles validation of file imports
@@ -44,21 +43,16 @@ public class ResourceValidator {
         int currentCount = resourceService.getResourceCount();
         int availableSlots = Constants.MAX_DOCUMENTS_PER_SESSION - currentCount;
 
-        // Check if any slots available
         if (availableSlots <= 0) {
-            return ValidationResult.error(
-                    String.format("This knowledge base has reached the maximum limit of %d documents.",
-                            Constants.MAX_DOCUMENTS_PER_SESSION));
+            return new ValidationResult(false, "Document limit reached. You cannot add more documents.");
         }
 
-        // Check if too many files selected
         if (files.size() > availableSlots) {
             return ValidationResult.error(
                     String.format("You selected %d files, but only %d slots are available (limit: %d documents).",
                             files.size(), availableSlots, Constants.MAX_DOCUMENTS_PER_SESSION));
         }
 
-        // Check file sizes
         List<File> oversizedFiles = files.stream()
                 .filter(f -> f.length() > Constants.MAX_DOCUMENT_SIZE_BYTES)
                 .collect(Collectors.toList());

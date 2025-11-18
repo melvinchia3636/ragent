@@ -63,16 +63,11 @@ public class ContentViewerController {
 
     @FXML
     private void handleEdit() {
-        // Enable editing mode
         contentArea.setEditable(true);
         originalContent = contentArea.getText();
-
-        // Toggle button visibility
         editButton.setVisible(false);
         saveButton.setVisible(true);
         cancelButton.setVisible(true);
-
-        // Focus on text area
         contentArea.requestFocus();
     }
 
@@ -95,7 +90,6 @@ public class ContentViewerController {
         // Run save and indexing in background thread
         new Thread(() -> {
             try {
-                // Save the content
                 resource.saveContent(newContent);
 
                 Platform.runLater(() -> {
@@ -119,9 +113,7 @@ public class ContentViewerController {
                     editButton.setVisible(true);
                     saveButton.setVisible(false);
                     cancelButton.setVisible(false);
-
-                    // Re-enable controls
-                    editButton.setDisable(false);
+                    contentArea.setDisable(false);
                 });
 
             } catch (Exception e) {
@@ -130,7 +122,6 @@ public class ContentViewerController {
 
                     AlertHelper.showError("Error", "Save Failed", "Failed to save the document: " + e.getMessage());
 
-                    // Re-enable controls
                     editButton.setDisable(false);
                     saveButton.setDisable(false);
                     cancelButton.setDisable(false);

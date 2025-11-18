@@ -1,4 +1,4 @@
-package dev.assignment.controller;
+package dev.assignment.handler;
 
 import java.io.IOException;
 import java.util.ArrayList;

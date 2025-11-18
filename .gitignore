@@ -18,11 +18,10 @@ buildNumber.properties
 .project
 .settings/
 
-# Knowledgebase Storage
+# Data
 knowledgebase_storage/
-
-# Embeddings Cache
 embeddings_cache/
+*.db
 
 # Environment variables
 .env

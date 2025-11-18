@@ -16,10 +16,10 @@ import javafx.stage.StageStyle;
  */
 public class ProgressDialog {
 
-    private Stage stage;
-    private ProgressBar progressBar;
-    private Label statusLabel;
-    private Label detailLabel;
+    private final Stage stage;
+    private final ProgressBar progressBar;
+    private final Label statusLabel;
+    private final Label detailLabel;
     private volatile boolean cancelled = false;
     private Runnable onCancelCallback;
 

@@ -5,12 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import dev.assignment.controller.ResourceDeletionHandler.DeletionResult;
-import dev.assignment.controller.ResourceImportHandler.ImportResult;
-import dev.assignment.controller.ResourceValidator.ValidationResult;
+import dev.assignment.handler.ResourceDeletionHandler;
+import dev.assignment.handler.ResourceImportHandler;
+import dev.assignment.handler.ResourceDeletionHandler.DeletionResult;
+import dev.assignment.handler.ResourceImportHandler.ImportResult;
 import dev.assignment.model.Resource;
 import dev.assignment.service.RAGService;
 import dev.assignment.service.ResourceService;
+import dev.assignment.util.ResourceValidator;
+import dev.assignment.util.ResourceValidator.ValidationResult;
 import dev.assignment.view.AlertHelper;
 import dev.assignment.view.ContentViewer;
 import dev.assignment.view.ResourceListCell;
