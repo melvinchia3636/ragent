@@ -40,7 +40,7 @@
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
@@ -72,9 +72,9 @@
                            </children>
                         </VBox>
                         <Pane HBox.hgrow="ALWAYS" />
-                        <Button fx:id="clearConversationButton" mnemonicParsing="false"
-                           onAction="#handleClearConversation"
-                           text="Clear Conversation" visible="false" managed="false">
+                        <Button fx:id="clearSessionButton" mnemonicParsing="false"
+                           onAction="#handleClearSession"
+                           text="Clear Session" visible="false" managed="false">
                            <graphic>
                               <ImageView fitHeight="150.0" fitWidth="18.0" pickOnBounds="true"
                                  preserveRatio="true">
@@ -118,16 +118,15 @@
                         </VBox>
                      </content>
                   </ScrollPane>
-                  <HBox>
+                  <HBox alignment="CENTER">
                      <children>
-                        <TextField fx:id="messageInput" promptText="Enter your prompt here..."
-                           HBox.hgrow="ALWAYS"
-                           style="-fx-padding: 10 15 10 15; -fx-focus-color: #409EFF;"
-                           onAction="#handleSendMessage">
+                        <TextArea fx:id="messageInput"
+                           promptText="Enter your prompt here... (Ctrl/Cmd+Enter to send)"
+                           HBox.hgrow="ALWAYS" prefRowCount="1" wrapText="true">
                            <HBox.margin>
                               <Insets right="10.0" />
                            </HBox.margin>
-                        </TextField>
+                        </TextArea>
                         <Button fx:id="sendButton" mnemonicParsing="false" text="Send"
                            style="-fx-padding: 10 20 10 20;" onAction="#handleSendMessage" />
                      </children>

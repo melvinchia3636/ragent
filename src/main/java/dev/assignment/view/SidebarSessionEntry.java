@@ -2,12 +2,10 @@ package dev.assignment.view;
 
 import dev.assignment.model.Session;
 import dev.assignment.service.DatabaseService;
-import dev.assignment.util.Constants;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -21,13 +19,17 @@ import javafx.scene.layout.VBox;
 /**
  * Custom component for displaying a session in the sidebar
  */
-public class SessionBox extends HBox {
+public class SidebarSessionEntry extends HBox {
 
     private final Session session;
     private final Label nameLabel;
     private final Runnable onSessionChanged;
 
-    public SessionBox(Session session, boolean isSelected, Runnable onSessionSelected, Runnable onSessionChanged) {
+    public SidebarSessionEntry(
+            Session session,
+            boolean isSelected,
+            Runnable onSessionSelected,
+            Runnable onSessionChanged) {
         this.session = session;
         this.onSessionChanged = onSessionChanged;
 
@@ -89,61 +91,17 @@ public class SessionBox extends HBox {
     }
 
     private void handleEdit() {
-        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
-        dialog.setTitle("Edit Session");
-        dialog.setHeaderText("Edit session settings");
+        EditSessionDialog dialog = new EditSessionDialog(session);
 
-        // Create form fields
-        Label sessionNameLabel = new Label("Session Name:");
-        TextField nameField = new TextField(session.getName());
-        nameField.setPrefWidth(300);
-
-        Label modelLabel = new Label("Model:");
-        ComboBox<String> modelComboBox = new ComboBox<>();
-        modelComboBox.getItems().addAll(Constants.AVAILABLE_MODELS);
-        modelComboBox.setValue(session.getModel());
-        modelComboBox.setPrefWidth(300);
-
-        // Create layout
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(10));
-        content.getChildren().addAll(
-                sessionNameLabel,
-                nameField,
-                modelLabel,
-                modelComboBox);
-
-        dialog.getDialogPane().setContent(content);
-
-        // Disable OK button if name is empty
-        dialog.getDialogPane().lookupButton(ButtonType.OK).setDisable(false);
-        nameField.textProperty().addListener((observable, oldValue, newValue) -> {
-            dialog.getDialogPane().lookupButton(ButtonType.OK)
-                    .setDisable(newValue.trim().isEmpty());
-        });
-
-        dialog.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                String newName = nameField.getText().trim();
-                String newModel = modelComboBox.getValue();
-
-                if (!newName.isEmpty()) {
-                    // Update database first
-                    DatabaseService.getInstance().updateSession(session.getId(), newName, newModel);
-
-                    // Notify about the change BEFORE updating the in-memory object
-                    // This allows ChatSessionController to detect the model change
-                    if (onSessionChanged != null) {
-                        onSessionChanged.run();
-                    }
-
-                    // Now update the in-memory session object
-                    session.setName(newName);
-                    session.setModel(newModel);
-                    nameLabel.setText(newName);
-                }
+        if (dialog.showAndWait()) {
+            // Notify about the change after the session has been updated
+            if (onSessionChanged != null) {
+                onSessionChanged.run();
             }
-        });
+
+            // Update the UI with the new name
+            nameLabel.setText(session.getName());
+        }
     }
 
     private void handleDelete() {
@@ -152,6 +110,9 @@ public class SessionBox extends HBox {
         alert.setHeaderText("Delete \"" + session.getName() + "\"?");
         alert.setContentText("This will permanently delete the session and all its knowledgebase files.\n\n" +
                 "To confirm, please type the session name below:");
+        AlertHelper.showWarning("Delete Session", "Delete \"" + session.getName() + "\"?",
+                "This will permanently delete the session and all its knowledgebase files.\n\n" +
+                        "To confirm, please type the session name below:");
 
         // Create a TextField for user input
         TextField confirmationField = new TextField();

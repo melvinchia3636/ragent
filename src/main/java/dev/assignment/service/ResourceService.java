@@ -25,9 +25,16 @@ public class ResourceService {
     private final String sessionId;
     private Path storagePath;
 
+    /**
+     * Progress callback interface for import operations
+     */
+    public interface ImportProgressCallback {
+        void onProgress(String message);
+    }
+
     private static final FileChooser.ExtensionFilter[] VALID_EXTENSIONS = new FileChooser.ExtensionFilter[] {
             new FileChooser.ExtensionFilter("Text Files", "*.txt"),
-            new FileChooser.ExtensionFilter("Markdown Files", "*.md"),
+            new FileChooser.ExtensionFilter("Markdown Files", "*.md", "*.mdx"),
             new FileChooser.ExtensionFilter("PDF Files (text will be extracted)", "*.pdf"),
             new FileChooser.ExtensionFilter("Word Documents (text will be extracted)", "*.docx"),
             new FileChooser.ExtensionFilter("PowerPoint Presentations (text will be extracted)",
@@ -100,6 +107,18 @@ public class ResourceService {
         return getResource(fileName) != null;
     }
 
+    /**
+     * Get the count of resources in the knowledge base
+     */
+    public int getResourceCount() {
+        File storageDir = getStoragePath().toFile();
+        if (storageDir.exists() && storageDir.isDirectory()) {
+            File[] files = storageDir.listFiles();
+            return files != null ? files.length : 0;
+        }
+        return 0;
+    }
+
     public boolean resourceExtensionValid(String extension) {
 
         for (String ext : getValidExtensionStrings()) {
@@ -148,6 +167,19 @@ public class ResourceService {
      * @return The imported Resource
      */
     public Resource importResource(File sourceFile, boolean overwrite) throws IOException {
+        return importResource(sourceFile, overwrite, null);
+    }
+
+    /**
+     * Import a file into the knowledgebase with progress callback
+     * 
+     * @param sourceFile       The file to import
+     * @param overwrite        Whether to overwrite if file already exists
+     * @param progressCallback Callback for progress updates
+     * @return The imported Resource
+     */
+    public Resource importResource(File sourceFile, boolean overwrite, ImportProgressCallback progressCallback)
+            throws IOException {
         String fileName = sourceFile.getName();
         String fileExtension = getFileExtension(fileName).toLowerCase();
 
@@ -169,6 +201,9 @@ public class ResourceService {
 
         if (needsExtraction) {
             // Extract text and save
+            if (progressCallback != null) {
+                progressCallback.onProgress("Extracting text from " + fileName + "...");
+            }
             String extractedText = TextExtractor.extractText(sourceFile);
             TextExtractor.saveTextToFile(extractedText, destinationPath.toFile());
         } else {
@@ -212,4 +247,5 @@ public class ResourceService {
         }
         return originalFileName + ".txt";
     }
+
 }

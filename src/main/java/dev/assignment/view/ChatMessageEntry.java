@@ -11,16 +11,19 @@ import javafx.scene.layout.VBox;
 /**
  * Custom component for displaying a chat message
  */
-public class ChatMessageBox extends VBox {
+public class ChatMessageEntry extends VBox {
 
     private final Label messageLabel;
-    private final Label sourcesLabel;
+    private Label sourcesLabel;
+    private final HBox messageContainer;
+    private final boolean isUserMessage;
 
-    public ChatMessageBox(ChatMessage message) {
+    public ChatMessageEntry(ChatMessage message) {
         this.messageLabel = new Label(message.getContent());
+        this.isUserMessage = message.isUser();
 
         // Create container for message alignment
-        HBox messageContainer = new HBox();
+        this.messageContainer = new HBox();
 
         // Set alignment based on message type
         if (message.isUser()) {
@@ -64,5 +67,41 @@ public class ChatMessageBox extends VBox {
         }
 
         setSpacing(0);
+    }
+
+    /**
+     * Update the message text (for streaming updates)
+     */
+    public void updateText(String newText) {
+        messageLabel.setText(newText);
+    }
+
+    /**
+     * Append text to the message (for streaming updates)
+     */
+    public void appendText(String text) {
+        messageLabel.setText(messageLabel.getText() + text);
+    }
+
+    /**
+     * Set the sources for the message
+     */
+    public void setSources(String sources) {
+        if (sourcesLabel != null) {
+            sourcesLabel.setText("Referenced from: " + sources);
+        } else if (!isUserMessage) {
+            // Create the sources label if it doesn't exist yet (for streaming responses)
+            sourcesLabel = new Label("Referenced from: " + sources);
+            sourcesLabel.setStyle("-fx-text-fill: #909090; -fx-font-size: 11px;");
+            sourcesLabel.setMaxWidth(Double.MAX_VALUE);
+            sourcesLabel.setAlignment(Pos.CENTER_LEFT);
+            sourcesLabel.setPadding(new Insets(2, 0, 5, 0));
+            sourcesLabel.setWrapText(true);
+            sourcesLabel.setMaxWidth(500);
+            sourcesLabel.setMinHeight(Region.USE_PREF_SIZE);
+
+            // Add the sources label before the message container
+            getChildren().add(0, sourcesLabel);
+        }
     }
 }

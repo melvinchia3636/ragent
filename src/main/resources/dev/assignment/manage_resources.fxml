@@ -36,6 +36,16 @@
                 <Font size="11.0" />
             </font>
             <VBox.margin>
+                <Insets bottom="2.0" />
+            </VBox.margin>
+        </Label>
+
+        <Label text="Tip: PDF, Word, and PowerPoint files will be automatically converted to text"
+            textFill="#909090">
+            <font>
+                <Font size="11.0" />
+            </font>
+            <VBox.margin>
                 <Insets bottom="5.0" />
             </VBox.margin>
         </Label>

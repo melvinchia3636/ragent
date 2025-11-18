@@ -34,6 +34,12 @@
 
         <HBox alignment="CENTER" spacing="10.0">
             <children>
+                <Button fx:id="editButton" mnemonicParsing="false" onAction="#handleEdit"
+                    text="Edit" />
+                <Button fx:id="saveButton" mnemonicParsing="false" onAction="#handleSave"
+                    text="Save" visible="false" />
+                <Button fx:id="cancelButton" mnemonicParsing="false" onAction="#handleCancel"
+                    text="Cancel" visible="false" />
                 <Button mnemonicParsing="false" onAction="#handleClose" text="Close" />
             </children>
         </HBox>

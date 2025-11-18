@@ -3,7 +3,7 @@ package dev.assignment.model;
 import java.time.LocalDateTime;
 
 /**
- * Represents a chat message in the conversation
+ * Represents a chat message in the session
  */
 public class ChatMessage {
     private final String id;

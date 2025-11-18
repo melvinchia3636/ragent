@@ -1,28 +1,29 @@
 package dev.assignment.controller;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import dev.assignment.controller.ResourceDeletionHandler.DeletionResult;
+import dev.assignment.controller.ResourceImportHandler.ImportResult;
+import dev.assignment.controller.ResourceValidator.ValidationResult;
 import dev.assignment.model.Resource;
 import dev.assignment.service.RAGService;
 import dev.assignment.service.ResourceService;
-import dev.assignment.view.ProgressDialog;
+import dev.assignment.view.AlertHelper;
+import dev.assignment.view.ContentViewer;
 import dev.assignment.view.ResourceListCell;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.ListView;
+import javafx.scene.control.SelectionMode;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 /**
  * Controller for the Resource Management window
+ * Coordinates between UI and handler classes
  */
 public class ResourceManagementController {
 
@@ -33,17 +34,53 @@ public class ResourceManagementController {
     private RAGService ragService;
     private Runnable onResourcesChangedCallback;
 
+    // Handler delegates
+    private ResourceValidator validator;
+    private ResourceImportHandler importHandler;
+    private ResourceDeletionHandler deletionHandler;
+
+    @FXML
+    private void initialize() {
+        resourceListView.setCellFactory(listView -> new ResourceListCell());
+        resourceListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        resourceListView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && getSelectedResource() != null) {
+                openContentViewer(getSelectedResource());
+            }
+        });
+    }
+
     public void setResourceService(ResourceService resourceService) {
         this.resourceService = resourceService;
+        this.validator = new ResourceValidator(resourceService);
+        this.importHandler = new ResourceImportHandler(resourceService, ragService, this::onImportComplete);
+        this.deletionHandler = new ResourceDeletionHandler(resourceService, ragService);
         loadResources();
     }
 
     public void setRagService(RAGService ragService) {
         this.ragService = ragService;
+        if (resourceService != null) {
+            this.importHandler = new ResourceImportHandler(resourceService, ragService, this::onImportComplete);
+            this.deletionHandler = new ResourceDeletionHandler(resourceService, ragService);
+        }
     }
 
     public void setOnResourcesChangedCallback(Runnable callback) {
         this.onResourcesChangedCallback = callback;
+    }
+
+    private void onImportComplete() {
+        loadResources();
+        notifyResourcesChanged();
+    }
+
+    private void loadResources() {
+        if (resourceService == null)
+            return;
+
+        resourceListView.getItems().clear();
+        resourceListView.getItems().addAll(resourceService.getAllResources());
     }
 
     private void notifyResourcesChanged() {
@@ -52,45 +89,200 @@ public class ResourceManagementController {
         }
     }
 
-    @FXML
-    private void initialize() {
-        // Set custom cell factory for displaying resources
-        resourceListView.setCellFactory(listView -> new ResourceListCell());
-
-        // Add double-click listener to open content viewer
-        resourceListView.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                Resource selectedResource = resourceListView.getSelectionModel().getSelectedItem();
-                if (selectedResource != null) {
-                    openContentViewer(selectedResource);
-                }
-            }
-        });
-
-        // Don't load resources here, will be loaded when setResourceService is called
+    private Resource getSelectedResource() {
+        return resourceListView.getSelectionModel().getSelectedItem();
     }
 
-    private void loadResources() {
-        if (resourceService == null) {
-            return;
-        }
-        resourceListView.getItems().clear();
-        List<Resource> resources = resourceService.getAllResources();
-        resourceListView.getItems().addAll(resources);
+    private List<Resource> getSelectedResources() {
+        return new ArrayList<>(resourceListView.getSelectionModel().getSelectedItems());
+    }
+
+    private Stage getOwnerStage() {
+        return (Stage) resourceListView.getScene().getWindow();
     }
 
     @FXML
     private void handleAddResource() {
+        if (validator.isDocumentLimitReached()) {
+            AlertHelper.showWarning("Document Limit Reached", "Cannot add more documents",
+                    "This knowledge base has reached the maximum limit. Please remove some documents before adding new ones.");
+            return;
+        }
+
         FileChooser fileChooser = createFileChooser();
-        Stage stage = (Stage) resourceListView.getScene().getWindow();
-        List<File> selectedFiles = fileChooser.showOpenMultipleDialog(stage);
+        List<File> selectedFiles = fileChooser.showOpenMultipleDialog(getOwnerStage());
 
         if (selectedFiles != null && !selectedFiles.isEmpty()) {
             if (selectedFiles.size() > 1) {
-                processMultipleFiles(selectedFiles, stage);
+                handleMultipleFileImport(selectedFiles);
             } else {
-                importSingleFile(selectedFiles.get(0));
+                handleSingleFileImport(selectedFiles.get(0));
             }
+        }
+    }
+
+    @FXML
+    private void handleRemoveResource() {
+        List<Resource> selected = getSelectedResources();
+        if (selected.isEmpty()) {
+            AlertHelper.showWarning("No Selection", "Please select one or more resources to remove.");
+            return;
+        }
+
+        if (!confirmDeletion(selected))
+            return;
+
+        DeletionResult result = deletionHandler.deleteMultipleResources(selected);
+
+        loadResources();
+        notifyResourcesChanged();
+
+        if (!result.hasFailures()) {
+            String message = result.successCount == 1
+                    ? "File has been removed."
+                    : result.successCount + " files have been removed.";
+            AlertHelper.showInfo("Success", message);
+        } else {
+            String message = String.format(
+                    "Removed %d file(s) successfully.\n\nFailed to remove %d file(s):\n%s",
+                    result.successCount, result.failCount, result.getFailedFilesMessage());
+            AlertHelper.showWarning("Partial Success", message);
+        }
+    }
+
+    @FXML
+    private void handleClose() {
+        getOwnerStage().close();
+    }
+
+    private void handleSingleFileImport(File file) {
+        ValidationResult validation = validator.validateSingleFile(file);
+        if (!validation.isValid()) {
+            AlertHelper.showWarning("File Too Large", "Document exceeds size limit", validation.getErrorMessage());
+            return;
+        }
+
+        String targetFileName = getTargetFileName(file);
+        boolean overwrite = handleFileConflict(targetFileName);
+
+        if (overwrite) {
+            importHandler.importSingleFile(file, targetFileName, true, getOwnerStage(),
+                    () -> {
+                        String message = ragService != null
+                                ? "File imported and indexed successfully as '" + targetFileName + "'."
+                                : "File imported successfully as '" + targetFileName + "'.";
+                        AlertHelper.showInfo("Success", message);
+                    },
+                    error -> AlertHelper.showError("Error", "Failed to import or index file: " + error));
+        }
+    }
+
+    private void handleMultipleFileImport(List<File> files) {
+        ValidationResult validation = validator.validateMultipleFiles(files);
+        if (!validation.isValid()) {
+            AlertHelper.showWarning("Validation Error", "Cannot import files", validation.getErrorMessage());
+            return;
+        }
+
+        List<String> conflicts = validator.findConflicts(files);
+        Boolean overwriteAll = handleMultipleFileConflicts(conflicts);
+
+        if (overwriteAll != null) {
+            importHandler.importMultipleFiles(files, overwriteAll, getOwnerStage(), this::showImportResults);
+        }
+    }
+
+    private void showImportResults(ImportResult result) {
+        if (result.cancelled) {
+            AlertHelper.showInfo("Import Cancelled",
+                    String.format("Import was cancelled.\n\nCompleted: %d\nFailed: %d\nSkipped: %d",
+                            result.success, result.failed, result.skipped));
+        } else {
+            String message = String.format("Import complete!\n\nSuccessfully imported: %d\nFailed: %d" +
+                    (result.skipped > 0 ? "\nSkipped: %d" : ""),
+                    result.success, result.failed, result.skipped);
+
+            if (result.failed > 0) {
+                AlertHelper.showWarning("Import Complete with Errors", message);
+            } else {
+                AlertHelper.showInfo("Import Complete", message);
+            }
+        }
+    }
+
+    private boolean handleFileConflict(String fileName) {
+        if (!resourceService.resourceExists(fileName)) {
+            return true;
+        }
+
+        return AlertHelper.showConfirm(
+                "File Exists",
+                "File already exists",
+                "The file '" + fileName + "' already exists. Do you want to replace it?");
+    }
+
+    private Boolean handleMultipleFileConflicts(List<String> conflicts) {
+        if (conflicts.isEmpty())
+            return true;
+
+        String fileList = String.join("\n", conflicts.subList(0, Math.min(5, conflicts.size())));
+        if (conflicts.size() > 5) {
+            fileList += "\n... and " + (conflicts.size() - 5) + " more";
+        }
+
+        return AlertHelper.showConfirm(
+                "Files Already Exist",
+                conflicts.size() + " file(s) already exist",
+                "The following files already exist:\n" + fileList +
+                        "\n\nDo you want to replace all existing files?");
+    }
+
+    private boolean confirmDeletion(List<Resource> resources) {
+        String header;
+        String content;
+
+        if (resources.size() == 1) {
+            header = "Remove Resource";
+            content = "Are you sure you want to remove '" + resources.get(0).getFileName() +
+                    "' from the knowledgebase?\nThis will delete the file from storage.";
+        } else {
+            String fileList = resources.stream()
+                    .limit(5)
+                    .map(Resource::getFileName)
+                    .collect(Collectors.joining("\n"));
+            if (resources.size() > 5) {
+                fileList += "\n... and " + (resources.size() - 5) + " more";
+            }
+            header = "Remove " + resources.size() + " Resources";
+            content = "Are you sure you want to remove these files from the knowledgebase?\n\n" +
+                    fileList + "\n\nThis will delete the files from storage.";
+        }
+
+        return AlertHelper.showConfirm("Confirm Deletion", header, content);
+    }
+
+    private void openContentViewer(Resource resource) {
+        try {
+            ContentViewer viewer = new ContentViewer(resource, getOwnerStage());
+            viewer.setOnSaveCallback(() -> handleContentSaved(resource));
+            viewer.show();
+        } catch (Exception e) {
+            AlertHelper.showError("Error", "Failed to open content viewer: " + e.getMessage());
+        }
+    }
+
+    private void handleContentSaved(Resource resource) {
+        try {
+            if (ragService != null) {
+                ragService.indexSingleFile(resource.getFile());
+            }
+
+            Platform.runLater(() -> {
+                loadResources();
+                notifyResourcesChanged();
+            });
+        } catch (Exception e) {
+            Platform.runLater(() -> AlertHelper.showError("Error", "Failed to re-index document: " + e.getMessage()));
         }
     }
 
@@ -103,304 +295,11 @@ public class ResourceManagementController {
         return fileChooser;
     }
 
-    private void importSingleFile(File file) {
-        try {
-            String fileName = file.getName();
-            String fileExtension = ResourceService.getFileExtension(fileName).toLowerCase();
-
-            boolean needsExtraction = fileExtension.equals(".docx") ||
-                    fileExtension.equals(".pptx") ||
-                    fileExtension.equals(".ppt") ||
-                    fileExtension.equals(".pdf");
-
-            String targetFileName = needsExtraction ? ResourceService.getTextFileName(fileName) : fileName;
-
-            boolean overwrite = false;
-            if (resourceService.resourceExists(targetFileName)) {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("File Exists");
-                alert.setHeaderText("File already exists");
-                alert.setContentText("The file '" + targetFileName + "' already exists. Do you want to replace it?");
-                overwrite = alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
-
-                if (!overwrite) {
-                    return;
-                }
-
-                // Remove old file from index if RAG service is available
-                if (ragService != null) {
-                    try {
-                        ragService.removeFileFromIndexByName(targetFileName);
-                    } catch (Exception e) {
-                        System.err.println("Failed to remove old file from index: " + e.getMessage());
-                    }
-                }
-            } else {
-                overwrite = true;
-            }
-
-            resourceService.importResource(file, overwrite);
-
-            // Index the file if RAG service is available
-            if (ragService != null) {
-                Stage ownerStage = (Stage) resourceListView.getScene().getWindow();
-                ProgressDialog progressDialog = new ProgressDialog(ownerStage);
-                progressDialog.show();
-
-                new Thread(() -> {
-                    try {
-                        Platform.runLater(
-                                () -> progressDialog.updateProgress(0, 1, "Indexing " + targetFileName + "..."));
-
-                        File importedFile = new File(resourceService.getStoragePath().toFile(), targetFileName);
-                        ragService.indexSingleFile(importedFile);
-
-                        Platform.runLater(() -> {
-                            progressDialog.close();
-                            loadResources();
-                            notifyResourcesChanged();
-                            showInfo("Success", "File imported and indexed successfully as '" + targetFileName + "'.");
-                        });
-                    } catch (Exception e) {
-                        Platform.runLater(() -> {
-                            progressDialog.close();
-                            loadResources();
-                            notifyResourcesChanged();
-                            showError("Indexing Error", "File imported but failed to index: " + e.getMessage());
-                        });
-                    }
-                }).start();
-            } else {
-                loadResources();
-                notifyResourcesChanged();
-                showInfo("Success", "File imported successfully as '" + targetFileName + "'.");
-            }
-
-        } catch (IOException e) {
-            showError("Import Error", "Failed to import file: " + e.getMessage());
-        }
-    }
-
-    private void processMultipleFiles(List<File> files, Stage ownerStage) {
-        List<String> conflicts = new ArrayList<>();
-        for (File file : files) {
-            String fileName = file.getName();
-            String fileExtension = ResourceService.getFileExtension(fileName).toLowerCase();
-
-            boolean needsExtraction = fileExtension.equals(".docx") ||
-                    fileExtension.equals(".pptx") ||
-                    fileExtension.equals(".ppt") ||
-                    fileExtension.equals(".pdf");
-
-            String targetFileName = needsExtraction ? ResourceService.getTextFileName(fileName) : fileName;
-
-            if (resourceService.resourceExists(targetFileName)) {
-                conflicts.add(targetFileName);
-            }
-        }
-
-        boolean overwriteAll = false;
-        if (!conflicts.isEmpty()) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Files Already Exist");
-            alert.setHeaderText(conflicts.size() + " file(s) already exist");
-            alert.setContentText("The following files already exist:\n" +
-                    String.join("\n", conflicts.subList(0, Math.min(5, conflicts.size()))) +
-                    (conflicts.size() > 5 ? "\n... and " + (conflicts.size() - 5) + " more" : "") +
-                    "\n\nDo you want to replace all existing files?");
-
-            ButtonType result = alert.showAndWait().orElse(ButtonType.CANCEL);
-            if (result == ButtonType.CANCEL) {
-                return;
-            }
-            overwriteAll = (result == ButtonType.OK);
-        } else {
-            overwriteAll = true;
-        }
-
-        final boolean shouldOverwrite = overwriteAll;
-
-        ProgressDialog progressDialog = new ProgressDialog(ownerStage);
-        progressDialog.show();
-
-        Thread processingThread = new Thread(() -> {
-            int total = files.size();
-            int successCount = 0;
-            int failCount = 0;
-            int skippedCount = 0;
-
-            for (int i = 0; i < files.size(); i++) {
-                File file = files.get(i);
-                final int currentIndex = i + 1;
-
-                try {
-                    String fileName = file.getName();
-                    String fileExtension = ResourceService.getFileExtension(fileName).toLowerCase();
-
-                    boolean needsExtraction = fileExtension.equals(".docx") ||
-                            fileExtension.equals(".pptx") ||
-                            fileExtension.equals(".ppt") ||
-                            fileExtension.equals(".pdf");
-
-                    String targetFileName = needsExtraction ? ResourceService.getTextFileName(fileName) : fileName;
-
-                    if (!shouldOverwrite && resourceService.resourceExists(targetFileName)) {
-                        skippedCount++;
-                        continue;
-                    }
-
-                    // Remove old file from index if it exists and will be overwritten
-                    if (shouldOverwrite && resourceService.resourceExists(targetFileName) && ragService != null) {
-                        try {
-                            ragService.removeFileFromIndexByName(targetFileName);
-                        } catch (Exception e) {
-                            System.err.println("Failed to remove old file from index: " + e.getMessage());
-                        }
-                    }
-
-                    // Show importing progress
-                    Platform.runLater(() -> progressDialog.updateProgress(currentIndex, total,
-                            "Importing " + file.getName() + "..."));
-
-                    resourceService.importResource(file, shouldOverwrite);
-
-                    // Index the file if RAG service is available
-                    if (ragService != null) {
-                        try {
-                            // Show indexing progress
-                            Platform.runLater(() -> progressDialog.updateProgress(currentIndex, total,
-                                    "Indexing " + file.getName() + "..."));
-
-                            File importedFile = new File(resourceService.getStoragePath().toFile(), targetFileName);
-                            ragService.indexSingleFile(importedFile);
-                        } catch (Exception indexError) {
-                            System.err.println("Failed to index " + file.getName() + ": " + indexError.getMessage());
-                        }
-                    }
-
-                    successCount++;
-                } catch (Exception e) {
-                    failCount++;
-                    System.err.println("Failed to import " + file.getName() + ": " + e.getMessage());
-                }
-
-                // Small delay for UI responsiveness
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-
-            final int finalSuccess = successCount;
-            final int finalFail = failCount;
-            final int finalSkipped = skippedCount;
-
-            Platform.runLater(() -> {
-                progressDialog.close();
-                loadResources();
-                notifyResourcesChanged();
-
-                String message = String.format(
-                        "Import complete!\n\nSuccessfully imported: %d\nFailed: %d" +
-                                (finalSkipped > 0 ? "\nSkipped: %d" : ""),
-                        finalSuccess, finalFail, finalSkipped);
-
-                if (finalFail > 0) {
-                    showWarning("Import Complete with Errors", message);
-                } else {
-                    showInfo("Import Complete", message);
-                }
-            });
-        });
-
-        processingThread.setDaemon(true);
-        processingThread.start();
-    }
-
-    @FXML
-    private void handleRemoveResource() {
-        Resource selectedResource = resourceListView.getSelectionModel().getSelectedItem();
-        if (selectedResource == null) {
-            showWarning("No Selection", "Please select a resource to remove.");
-            return;
-        }
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirm Deletion");
-        alert.setHeaderText("Remove Resource");
-        alert.setContentText("Are you sure you want to remove '" + selectedResource.getFileName() +
-                "' from the knowledgebase?\nThis will delete the file from storage.");
-
-        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            try {
-                String fileName = selectedResource.getFileName();
-
-                resourceService.deleteResource(selectedResource);
-
-                // Remove from index if RAG service is available
-                if (ragService != null) {
-                    try {
-                        ragService.removeFileFromIndexByName(fileName);
-                    } catch (Exception e) {
-                        System.err.println("Failed to remove file from index: " + e.getMessage());
-                    }
-                }
-
-                loadResources();
-                notifyResourcesChanged();
-                showInfo("Success", "File '" + fileName + "' has been removed.");
-            } catch (IOException e) {
-                showError("Delete Error", "Failed to delete file: " + e.getMessage());
-            }
-        }
-    }
-
-    @FXML
-    private void handleClose() {
-        Stage stage = (Stage) resourceListView.getScene().getWindow();
-        stage.close();
-    }
-
-    private void openContentViewer(Resource resource) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/assignment/content_viewer.fxml"));
-            Parent root = loader.load();
-
-            ContentViewerController controller = loader.getController();
-            controller.setResource(resource);
-
-            Stage stage = new Stage();
-            stage.setTitle("View: " + resource.getFileName());
-            stage.initOwner(resourceListView.getScene().getWindow());
-
-            Scene scene = new Scene(root, 700, 600);
-            stage.setScene(scene);
-            stage.show();
-
-        } catch (IOException e) {
-            showError("Error", "Failed to open content viewer: " + e.getMessage());
-        }
-    }
-
-    private void showError(String title, String message) {
-        showAlert(Alert.AlertType.ERROR, title, message);
-    }
-
-    private void showWarning(String title, String message) {
-        showAlert(Alert.AlertType.WARNING, title, message);
-    }
-
-    private void showInfo(String title, String message) {
-        showAlert(Alert.AlertType.INFORMATION, title, message);
-    }
-
-    private void showAlert(Alert.AlertType type, String title, String message) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private String getTargetFileName(File file) {
+        String fileName = file.getName();
+        String extension = ResourceService.getFileExtension(fileName).toLowerCase();
+        boolean needsExtraction = extension.equals(".docx") || extension.equals(".pptx") ||
+                extension.equals(".ppt") || extension.equals(".pdf");
+        return needsExtraction ? ResourceService.getTextFileName(fileName) : fileName;
     }
 }

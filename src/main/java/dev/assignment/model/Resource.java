@@ -84,6 +84,20 @@ public class Resource {
     }
 
     /**
+     * Save new content to the file
+     */
+    public void saveContent(String newContent) throws IOException {
+        if (file != null) {
+            Files.writeString(file.toPath(), newContent);
+            // Update cached content and character count
+            this.content = newContent;
+            this.characterCount = newContent.length();
+        } else {
+            throw new IOException("Cannot save: file is null");
+        }
+    }
+
+    /**
      * Delete the resource file
      */
     public boolean delete() throws IOException {

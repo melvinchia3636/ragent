@@ -4,18 +4,13 @@ import java.util.function.Consumer;
 
 import dev.assignment.model.Session;
 import dev.assignment.service.DatabaseService;
-import dev.assignment.util.Constants;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
@@ -27,7 +22,7 @@ public class SessionSidebar extends VBox {
 
     private final VBox sessionListContainer;
     private final ScrollPane scrollPane;
-    private final Button newConversationButton;
+    private final Button newSessionButton;
     private ObservableList<Session> sessions = FXCollections.observableArrayList();
     private Session currentSession;
     private Consumer<Session> onSessionSelected;
@@ -55,12 +50,12 @@ public class SessionSidebar extends VBox {
         // Add margin to scroll pane
         VBox.setMargin(scrollPane, new Insets(0, 0, 20, 0));
 
-        // Create "New Conversation" button
-        newConversationButton = new Button("New Conversation");
-        newConversationButton.setMaxWidth(Double.MAX_VALUE);
-        newConversationButton.setMnemonicParsing(false);
-        newConversationButton.setOnAction(e -> handleNewConversation());
-        VBox.setMargin(newConversationButton, new Insets(0, 20, 0, 0));
+        // Create "New Session" button
+        newSessionButton = new Button("New Session");
+        newSessionButton.setMaxWidth(Double.MAX_VALUE);
+        newSessionButton.setMnemonicParsing(false);
+        newSessionButton.setOnAction(e -> handleNewSession());
+        VBox.setMargin(newSessionButton, new Insets(0, 20, 0, 0));
 
         // Add icon to button
         try {
@@ -69,12 +64,12 @@ public class SessionSidebar extends VBox {
             icon.setFitHeight(150.0);
             icon.setFitWidth(18.0);
             icon.setPreserveRatio(true);
-            newConversationButton.setGraphic(icon);
+            newSessionButton.setGraphic(icon);
         } catch (Exception e) {
             // Icon not found, continue without it
         }
 
-        getChildren().addAll(scrollPane, newConversationButton);
+        getChildren().addAll(scrollPane, newSessionButton);
     }
 
     /**
@@ -104,10 +99,10 @@ public class SessionSidebar extends VBox {
 
         sessionListContainer.getChildren().clear();
 
-        // Create individual SessionBox components for each session
+        // Create individual SidebarSessionEntry components for each session
         if (sessions.isEmpty()) {
-            // Show "no conversations" message
-            Label emptyLabel = new Label("No conversations yet.");
+            // Show "no sessions" message
+            Label emptyLabel = new Label("No sessions yet.");
             emptyLabel.setStyle("-fx-text-fill: #909090; -fx-font-size: 13px;");
             emptyLabel.setMaxWidth(Double.MAX_VALUE);
             emptyLabel.setAlignment(Pos.CENTER);
@@ -115,7 +110,7 @@ public class SessionSidebar extends VBox {
         } else {
             for (Session session : sessions) {
                 boolean isSelected = currentSession != null && currentSession.getId().equals(session.getId());
-                SessionBox sessionBox = new SessionBox(
+                SidebarSessionEntry sessionBox = new SidebarSessionEntry(
                         session,
                         isSelected,
                         () -> selectSession(session),
@@ -167,8 +162,8 @@ public class SessionSidebar extends VBox {
      */
     private void refreshSessionStyling() {
         for (int i = 0; i < sessionListContainer.getChildren().size(); i++) {
-            if (sessionListContainer.getChildren().get(i) instanceof SessionBox) {
-                SessionBox sessionBox = (SessionBox) sessionListContainer.getChildren().get(i);
+            if (sessionListContainer.getChildren().get(i) instanceof SidebarSessionEntry) {
+                SidebarSessionEntry sessionBox = (SidebarSessionEntry) sessionListContainer.getChildren().get(i);
                 Session session = sessions.get(i);
 
                 // Apply bold style if this is the selected session
@@ -179,59 +174,19 @@ public class SessionSidebar extends VBox {
     }
 
     /**
-     * Handle creating a new conversation
+     * Handle creating a new session
      */
-    private void handleNewConversation() {
-        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
-        dialog.setTitle("New Conversation");
-        dialog.setHeaderText("Create a new conversation");
+    private void handleNewSession() {
+        NewSessionDialog dialog = new NewSessionDialog();
+        Session newSession = dialog.showAndWait();
 
-        // Create form fields
-        Label nameLabel = new Label("Conversation Name:");
-        TextField nameField = new TextField();
-        nameField.setPrefWidth(300);
-
-        Label modelLabel = new Label("Model:");
-        ComboBox<String> modelComboBox = new ComboBox<>();
-        modelComboBox.getItems().addAll(Constants.AVAILABLE_MODELS);
-        modelComboBox.setValue(Constants.DEFAULT_MODEL);
-        modelComboBox.setPrefWidth(300);
-
-        // Create layout
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(10));
-        content.getChildren().addAll(
-                nameLabel,
-                nameField,
-                modelLabel,
-                modelComboBox);
-
-        dialog.getDialogPane().setContent(content);
-
-        // Disable OK button if name is empty
-        dialog.getDialogPane().lookupButton(ButtonType.OK).setDisable(true);
-        nameField.textProperty().addListener((observable, oldValue, newValue) -> {
-            dialog.getDialogPane().lookupButton(ButtonType.OK)
-                    .setDisable(newValue.trim().isEmpty());
-        });
-
-        dialog.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                String name = nameField.getText().trim();
-                String model = modelComboBox.getValue();
-
-                if (!name.isEmpty()) {
-                    Session newSession = DatabaseService.getInstance().createSession(name);
-                    newSession.setModel(model);
-                    DatabaseService.getInstance().updateSession(newSession.getId(), name, model);
-                    loadSessions();
-                    selectSession(newSession);
-                    if (onSessionChanged != null) {
-                        onSessionChanged.run();
-                    }
-                }
+        if (newSession != null) {
+            loadSessions();
+            selectSession(newSession);
+            if (onSessionChanged != null) {
+                onSessionChanged.run();
             }
-        });
+        }
     }
 
     public Session getCurrentSession() {

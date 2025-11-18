@@ -7,25 +7,24 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import dev.assignment.model.ChatMessage;
-import dev.assignment.model.QueryResponse;
 import dev.assignment.model.Resource;
 import dev.assignment.model.Session;
 import dev.assignment.service.APIKeyService;
 import dev.assignment.service.DatabaseService;
 import dev.assignment.service.RAGService;
 import dev.assignment.service.ResourceService;
+import dev.assignment.util.Constants;
+import dev.assignment.view.AlertHelper;
 import dev.assignment.view.ChatAreaMessage;
-import dev.assignment.view.ChatMessageBox;
+import dev.assignment.view.ChatMessageEntry;
 import dev.assignment.view.SessionSidebar;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -42,12 +41,12 @@ public class ChatSessionController {
     private final Label sessionNameLabel;
     private final Label sessionCreatedLabel;
     private final VBox chatContainer;
-    private final TextField messageInput;
+    private final TextArea messageInput;
     private final Button sendButton;
     private final Label statusLabel;
     private final Label modelLabel;
     private final Button manageKnowledgebaseButton;
-    private final Button clearConversationButton;
+    private final Button clearSessionButton;
     private SessionSidebar sessionSidebar;
 
     // Services
@@ -61,12 +60,12 @@ public class ChatSessionController {
             Label sessionNameLabel,
             Label sessionCreatedLabel,
             VBox chatContainer,
-            TextField messageInput,
+            TextArea messageInput,
             Button sendButton,
             Label statusLabel,
             Label modelLabel,
             Button manageKnowledgebaseButton,
-            Button clearConversationButton,
+            Button clearSessionButton,
             SessionSidebar sessionSidebar) {
         this.sessionNameLabel = sessionNameLabel;
         this.sessionCreatedLabel = sessionCreatedLabel;
@@ -76,8 +75,27 @@ public class ChatSessionController {
         this.statusLabel = statusLabel;
         this.modelLabel = modelLabel;
         this.manageKnowledgebaseButton = manageKnowledgebaseButton;
-        this.clearConversationButton = clearConversationButton;
+        this.clearSessionButton = clearSessionButton;
         this.sessionSidebar = sessionSidebar;
+
+        // Set up keyboard shortcut: Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac) to
+        // send
+        messageInput.setOnKeyPressed(event -> {
+            if ((event.isShortcutDown() || event.isControlDown())
+                    && event.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                event.consume();
+                handleSendMessage();
+            }
+        });
+
+        // Set up dynamic row count adjustment based on content
+        messageInput.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                int lineCount = newValue.split("\n", -1).length;
+                int newRowCount = Math.min(Math.max(1, lineCount), 10); // Min 1, Max 10 rows
+                messageInput.setPrefRowCount(newRowCount);
+            }
+        });
 
         // Disable inputs by default when no session is selected
         setInputControlsDisabled(true);
@@ -98,7 +116,7 @@ public class ChatSessionController {
     private void toggleDisabilityOfAllControls(boolean disable) {
         setInputControlsDisabled(disable);
         manageKnowledgebaseButton.setDisable(disable);
-        clearConversationButton.setDisable(disable);
+        clearSessionButton.setDisable(disable);
         if (sessionSidebar != null) {
             sessionSidebar.setDisable(disable);
         }
@@ -172,11 +190,11 @@ public class ChatSessionController {
                         chatContainer.getChildren().remove(indexingMessage);
                         statusLabel.setText("Error indexing knowledgebase");
                         setInputControlsDisabled(false);
-                        Alert alert = new Alert(Alert.AlertType.ERROR);
-                        alert.setTitle("Indexing Error");
-                        alert.setHeaderText("Failed to index knowledgebase");
-                        alert.setContentText(e.getMessage());
-                        alert.showAndWait();
+
+                        AlertHelper.showError(
+                                "Indexing Error",
+                                "Failed to index knowledgebase",
+                                e.getMessage());
                     });
                 }
             }).start();
@@ -236,8 +254,8 @@ public class ChatSessionController {
             modelLabel.setText("Model: " + session.getModel());
             manageKnowledgebaseButton.setVisible(true);
             manageKnowledgebaseButton.setManaged(true);
-            clearConversationButton.setVisible(true);
-            clearConversationButton.setManaged(true);
+            clearSessionButton.setVisible(true);
+            clearSessionButton.setManaged(true);
             logger.debug("Updated session info: {}", session.getName());
         } else {
             sessionNameLabel.setText("No Session Selected");
@@ -245,8 +263,8 @@ public class ChatSessionController {
             modelLabel.setText("");
             manageKnowledgebaseButton.setVisible(false);
             manageKnowledgebaseButton.setManaged(false);
-            clearConversationButton.setVisible(false);
-            clearConversationButton.setManaged(false);
+            clearSessionButton.setVisible(false);
+            clearSessionButton.setManaged(false);
             setInputControlsDisabled(true);
             logger.debug("Cleared session info");
         }
@@ -290,11 +308,7 @@ public class ChatSessionController {
             logger.info("Knowledgebase management window opened");
         } catch (IOException e) {
             logger.error("Error opening knowledgebase management", e);
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText("Failed to open knowledgebase management");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            AlertHelper.showError("Error", "Failed to open knowledgebase management", e.getMessage());
         }
     }
 
@@ -305,6 +319,14 @@ public class ChatSessionController {
         String userMessage = messageInput.getText().trim();
 
         if (userMessage.isEmpty()) {
+            return;
+        }
+
+        // Check query length
+        if (userMessage.length() > Constants.MAX_QUERY_LENGTH) {
+            AlertHelper.showWarning("Query Too Long", "Your query exceeds the maximum length",
+                    String.format("Please limit your query to %d characters. Current length: %d characters.",
+                            Constants.MAX_QUERY_LENGTH, userMessage.length()));
             return;
         }
 
@@ -320,67 +342,89 @@ public class ChatSessionController {
 
         // Add user message to chat
         ChatMessage userChatMessage = new ChatMessage(userMessage, true);
-        ChatMessageBox userMessageBox = new ChatMessageBox(userChatMessage);
+        ChatMessageEntry userMessageBox = new ChatMessageEntry(userChatMessage);
         chatContainer.getChildren().add(userMessageBox);
 
         // Save user message to database
         DatabaseService.getInstance().saveChatMessage(currentSession.getId(), userChatMessage);
 
-        // Show loading indicator
-        Label loadingLabel = new Label("Getting response...");
-        loadingLabel.setStyle("-fx-text-fill: #0000008b;");
-        loadingLabel.setMaxWidth(Double.MAX_VALUE);
-        loadingLabel.setAlignment(Pos.CENTER_LEFT);
-        chatContainer.getChildren().add(loadingLabel);
+        // Create placeholder for AI response
+        ChatMessage aiChatMessage = new ChatMessage("...", false);
+        ChatMessageEntry aiMessageBox = new ChatMessageEntry(aiChatMessage);
+        chatContainer.getChildren().add(aiMessageBox);
 
         // Disable all controls while processing
         toggleDisabilityOfAllControls(true);
         statusLabel.setText("Generating response...");
 
-        // Query RAG in background
+        // Query RAG with streaming in background
         String finalUserMessage = userMessage;
         new Thread(() -> {
             try {
-                QueryResponse queryResponse = ragService.query(finalUserMessage);
-                logger.info("Received response with {} sources", queryResponse.getSources().size());
+                ragService.queryStreaming(finalUserMessage, new RAGService.StreamingCallback() {
+                    private final StringBuilder responseBuilder = new StringBuilder();
+                    private java.util.List<String> sources = new java.util.ArrayList<>();
 
-                Platform.runLater(() -> {
-                    // Remove loading indicator
-                    chatContainer.getChildren().remove(loadingLabel);
+                    @Override
+                    public void onStart(java.util.List<String> sourceDocs) {
+                        sources = sourceDocs;
+                    }
 
-                    // Prepare sources for AI message
-                    String sources = queryResponse.hasSources()
-                            ? String.join(", ", queryResponse.getSources())
-                            : null;
+                    @Override
+                    public void onNext(String token) {
+                        responseBuilder.append(token);
+                        Platform.runLater(() -> {
+                            aiMessageBox.updateText(responseBuilder.toString());
+                        });
+                    }
 
-                    // Add AI response to chat
-                    ChatMessage aiChatMessage = new ChatMessage(
-                            queryResponse.getResponse(),
-                            false,
-                            sources);
-                    ChatMessageBox aiMessageBox = new ChatMessageBox(aiChatMessage);
-                    chatContainer.getChildren().add(aiMessageBox);
+                    @Override
+                    public void onComplete(String fullResponse) {
+                        Platform.runLater(() -> {
+                            // Update final message
+                            aiMessageBox.updateText(fullResponse);
 
-                    // Save AI message to database
-                    DatabaseService.getInstance().saveChatMessage(currentSession.getId(), aiChatMessage);
+                            // Set sources if available
+                            String sourcesText = null;
+                            if (!sources.isEmpty()) {
+                                sourcesText = String.join(", ", sources);
+                                aiMessageBox.setSources(sourcesText);
+                            }
 
-                    // Re-enable all controls
-                    toggleDisabilityOfAllControls(false);
-                    statusLabel.setText("Ready");
-                    messageInput.requestFocus();
+                            // Create final AI message with sources and save to database
+                            ChatMessage finalAiMessage = new ChatMessage(fullResponse, false, sourcesText);
+                            DatabaseService.getInstance().saveChatMessage(currentSession.getId(), finalAiMessage);
+
+                            // Re-enable all controls
+                            toggleDisabilityOfAllControls(false);
+                            statusLabel.setText("Ready");
+                            messageInput.requestFocus();
+                        });
+                    }
+
+                    @Override
+                    public void onError(Throwable error) {
+                        logger.error("Error getting response", error);
+                        Platform.runLater(() -> {
+                            // Remove placeholder AI message
+                            chatContainer.getChildren().remove(aiMessageBox);
+
+                            AlertHelper.showError("Error", "Failed to get response: " + error.getMessage());
+
+                            // Re-enable all controls
+                            toggleDisabilityOfAllControls(false);
+                            statusLabel.setText("Error occurred");
+                            messageInput.requestFocus();
+                        });
+                    }
                 });
             } catch (Exception e) {
-                logger.error("Error getting response", e);
+                logger.error("Error initiating streaming query", e);
                 Platform.runLater(() -> {
-                    // Remove loading indicator
-                    chatContainer.getChildren().remove(loadingLabel);
+                    // Remove placeholder AI message
+                    chatContainer.getChildren().remove(aiMessageBox);
 
-                    // Show error
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("Error");
-                    alert.setHeaderText("Failed to get response");
-                    alert.setContentText(e.getMessage());
-                    alert.showAndWait();
+                    AlertHelper.showError("Error", "Failed to get response", e.getMessage());
 
                     // Re-enable all controls
                     toggleDisabilityOfAllControls(false);
@@ -420,7 +464,7 @@ public class ChatSessionController {
 
                 // Add messages to chat
                 for (ChatMessage message : history) {
-                    ChatMessageBox messageBox = new ChatMessageBox(message);
+                    ChatMessageEntry messageBox = new ChatMessageEntry(message);
                     chatContainer.getChildren().add(messageBox);
                 }
 
@@ -456,7 +500,7 @@ public class ChatSessionController {
 
             if (isEmpty) {
                 boolean hasChatHistory = chatContainer.getChildren().stream()
-                        .anyMatch(node -> node instanceof ChatMessageBox);
+                        .anyMatch(node -> node instanceof ChatMessageEntry);
 
                 if (hasChatHistory) {
                     // Preserve chat history but show empty message at the bottom
@@ -497,38 +541,35 @@ public class ChatSessionController {
     }
 
     /**
-     * Handle clearing the conversation history
+     * Handle clearing the session history
      */
-    public void handleClearConversation() {
-        logger.info("Clearing conversation");
+    public void handleClearSession() {
+        logger.info("Clearing session");
 
         if (currentSession == null) {
-            logger.warn("No session selected for clearing conversation");
+            logger.warn("No session selected for clearing session");
             return;
         }
 
-        // Confirm with user
-        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmAlert.setTitle("Clear Conversation");
-        confirmAlert.setHeaderText("Clear all messages in this conversation?");
-        confirmAlert.setContentText("This action cannot be undone.");
+        boolean confirmClear = AlertHelper.showConfirm(
+                "Clear Session",
+                "Clear all messages in this session?",
+                "This action cannot be undone.");
 
-        confirmAlert.showAndWait().ifPresent(response -> {
-            if (response == javafx.scene.control.ButtonType.OK) {
-                // Clear from database
-                DatabaseService.getInstance().clearChatHistory(currentSession.getId());
+        if (confirmClear) {
+            DatabaseService.getInstance().clearChatHistory(currentSession.getId());
 
-                // Clear from RAG service (conversation history)
-                if (ragService != null) {
-                    ragService.clearHistory();
-                }
-
-                // Clear from UI
-                chatContainer.getChildren().removeIf(node -> node instanceof ChatMessageBox);
-
-                logger.info("Conversation cleared for session: {}", currentSession.getName());
-                statusLabel.setText("Conversation cleared");
+            // Clear from RAG service (session history)
+            if (ragService != null) {
+                ragService.clearHistory();
             }
-        });
+
+            // Clear from UI
+            chatContainer.getChildren().removeIf(node -> node instanceof ChatMessageEntry);
+
+            logger.info("Session cleared for session: {}", currentSession.getName());
+            statusLabel.setText("Session cleared");
+        }
+
     }
 }

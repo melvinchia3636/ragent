@@ -3,6 +3,7 @@ package dev.assignment.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import io.github.cdimascio.dotenv.Dotenv;
 import javafx.scene.control.TextInputDialog;
 
@@ -132,5 +133,62 @@ public class APIKeyService {
     public void clearApiKey() {
         this.apiKey = null;
         logger.info("API key cleared");
+    }
+
+    /**
+     * Validate the API key by making a test request to OpenAI
+     * 
+     * @return true if the API key is valid, false otherwise
+     */
+    public boolean validateApiKey() {
+        if (!hasApiKey()) {
+            return false;
+        }
+
+        try {
+            // Make a minimal test request to validate the key
+            dev.langchain4j.model.openai.OpenAiChatModel testModel = dev.langchain4j.model.openai.OpenAiChatModel
+                    .builder()
+                    .apiKey(apiKey)
+                    .modelName("gpt-4o-mini")
+                    .maxTokens(1)
+                    .build();
+
+            // Try to generate a minimal response
+            testModel.chat("test");
+            logger.info("API key validation successful");
+            return true;
+        } catch (Exception e) {
+            logger.error("API key validation failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Validate a specific API key without setting it
+     * 
+     * @param keyToValidate the API key to validate
+     * @return true if the API key is valid, false otherwise
+     */
+    public boolean validateApiKey(String keyToValidate) {
+        if (keyToValidate == null || keyToValidate.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            dev.langchain4j.model.openai.OpenAiChatModel testModel = dev.langchain4j.model.openai.OpenAiChatModel
+                    .builder()
+                    .apiKey(keyToValidate)
+                    .modelName("gpt-4o-mini")
+                    .maxTokens(1)
+                    .build();
+
+            testModel.chat("test");
+            logger.info("API key validation successful");
+            return true;
+        } catch (Exception e) {
+            logger.error("API key validation failed", e);
+            return false;
+        }
     }
 }

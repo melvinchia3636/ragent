@@ -20,6 +20,8 @@ public class ProgressDialog {
     private ProgressBar progressBar;
     private Label statusLabel;
     private Label detailLabel;
+    private volatile boolean cancelled = false;
+    private Runnable onCancelCallback;
 
     public ProgressDialog(Stage owner) {
         stage = new Stage();
@@ -51,6 +53,14 @@ public class ProgressDialog {
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
+
+        // Handle window close request
+        stage.setOnCloseRequest(event -> {
+            cancelled = true;
+            if (onCancelCallback != null) {
+                onCancelCallback.run();
+            }
+        });
     }
 
     /**
@@ -93,5 +103,19 @@ public class ProgressDialog {
     public void bindToTask(Task<?> task) {
         progressBar.progressProperty().bind(task.progressProperty());
         detailLabel.textProperty().bind(task.messageProperty());
+    }
+
+    /**
+     * Check if the dialog has been cancelled
+     */
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    /**
+     * Set callback to be called when dialog is closed/cancelled
+     */
+    public void setOnCancel(Runnable callback) {
+        this.onCancelCallback = callback;
     }
 }
