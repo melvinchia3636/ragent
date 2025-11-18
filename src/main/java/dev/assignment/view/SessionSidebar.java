@@ -4,15 +4,18 @@ import java.util.function.Consumer;
 
 import dev.assignment.model.Session;
 import dev.assignment.service.DatabaseService;
+import dev.assignment.util.Constants;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
@@ -126,7 +129,20 @@ public class SessionSidebar extends VBox {
      * Handle session changes (rename, delete, etc.) and notify parent controller
      */
     private void handleSessionChanged() {
+        // Check if the current session still exists before reloading
+        String currentSessionId = currentSession != null ? currentSession.getId() : null;
+
         loadSessions();
+
+        // If the current session was deleted, clear it
+        if (currentSessionId != null) {
+            boolean sessionStillExists = sessions.stream()
+                    .anyMatch(s -> s.getId().equals(currentSessionId));
+            if (!sessionStillExists) {
+                currentSession = null;
+            }
+        }
+
         if (onSessionChanged != null) {
             onSessionChanged.run();
         }
@@ -166,24 +182,54 @@ public class SessionSidebar extends VBox {
      * Handle creating a new conversation
      */
     private void handleNewConversation() {
-        TextInputDialog dialog = new TextInputDialog();
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
         dialog.setTitle("New Conversation");
         dialog.setHeaderText("Create a new conversation");
-        dialog.setContentText("Conversation name:");
 
-        dialog.showAndWait().ifPresent(name -> {
-            if (!name.trim().isEmpty()) {
-                Session newSession = DatabaseService.getInstance().createSession(name.trim());
-                loadSessions();
-                selectSession(newSession);
-                if (onSessionChanged != null) {
-                    onSessionChanged.run();
+        // Create form fields
+        Label nameLabel = new Label("Conversation Name:");
+        TextField nameField = new TextField();
+        nameField.setPrefWidth(300);
+
+        Label modelLabel = new Label("Model:");
+        ComboBox<String> modelComboBox = new ComboBox<>();
+        modelComboBox.getItems().addAll(Constants.AVAILABLE_MODELS);
+        modelComboBox.setValue(Constants.DEFAULT_MODEL);
+        modelComboBox.setPrefWidth(300);
+
+        // Create layout
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(10));
+        content.getChildren().addAll(
+                nameLabel,
+                nameField,
+                modelLabel,
+                modelComboBox);
+
+        dialog.getDialogPane().setContent(content);
+
+        // Disable OK button if name is empty
+        dialog.getDialogPane().lookupButton(ButtonType.OK).setDisable(true);
+        nameField.textProperty().addListener((observable, oldValue, newValue) -> {
+            dialog.getDialogPane().lookupButton(ButtonType.OK)
+                    .setDisable(newValue.trim().isEmpty());
+        });
+
+        dialog.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                String name = nameField.getText().trim();
+                String model = modelComboBox.getValue();
+
+                if (!name.isEmpty()) {
+                    Session newSession = DatabaseService.getInstance().createSession(name);
+                    newSession.setModel(model);
+                    DatabaseService.getInstance().updateSession(newSession.getId(), name, model);
+                    loadSessions();
+                    selectSession(newSession);
+                    if (onSessionChanged != null) {
+                        onSessionChanged.run();
+                    }
                 }
-            } else {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("Invalid Name");
-                alert.setHeaderText("Conversation name cannot be empty");
-                alert.showAndWait();
             }
         });
     }

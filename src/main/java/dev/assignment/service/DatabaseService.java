@@ -11,12 +11,17 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import dev.assignment.model.ChatMessage;
 import dev.assignment.model.Session;
 
 /**
  * Service for managing SQLite database operations
  */
 public class DatabaseService {
+    private static final Logger logger = LogManager.getLogger(DatabaseService.class);
     private static final String DB_PATH = "rag_sessions.db";
     private static DatabaseService instance;
     private Connection connection;
@@ -40,7 +45,7 @@ public class DatabaseService {
             connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
             createTables();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to initialize database", e);
             throw new RuntimeException("Failed to initialize database", e);
         }
     }
@@ -52,11 +57,24 @@ public class DatabaseService {
         String createSessionsTable = "CREATE TABLE IF NOT EXISTS sessions (" +
                 "id TEXT PRIMARY KEY, " +
                 "name TEXT NOT NULL, " +
+                "model TEXT NOT NULL DEFAULT 'gpt-4o-mini', " +
                 "created_at TEXT NOT NULL" +
+                ")";
+
+        String createMessagesTable = "CREATE TABLE IF NOT EXISTS messages (" +
+                "id TEXT PRIMARY KEY, " +
+                "session_id TEXT NOT NULL, " +
+                "content TEXT NOT NULL, " +
+                "is_user INTEGER NOT NULL, " +
+                "timestamp TEXT NOT NULL, " +
+                "sources TEXT, " +
+                "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE" +
                 ")";
 
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createSessionsTable);
+            stmt.execute(createMessagesTable);
+            logger.info("Database tables created successfully");
         }
     }
 
@@ -66,11 +84,12 @@ public class DatabaseService {
     public Session createSession(String name) {
         Session session = new Session(name);
 
-        String sql = "INSERT INTO sessions (id, name, created_at) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO sessions (id, name, model, created_at) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, session.getId());
             pstmt.setString(2, session.getName());
-            pstmt.setString(3, session.getCreatedAt().toString());
+            pstmt.setString(3, session.getModel());
+            pstmt.setString(4, session.getCreatedAt().toString());
             pstmt.executeUpdate();
 
             File sessionFolder = new File("knowledgebase_storage/" + session.getId());
@@ -78,7 +97,7 @@ public class DatabaseService {
 
             return session;
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to create session", e);
             throw new RuntimeException("Failed to create session", e);
         }
     }
@@ -88,7 +107,7 @@ public class DatabaseService {
      */
     public List<Session> getAllSessions() {
         List<Session> sessions = new ArrayList<>();
-        String sql = "SELECT id, name, created_at FROM sessions ORDER BY created_at DESC";
+        String sql = "SELECT id, name, model, created_at FROM sessions ORDER BY created_at DESC";
 
         try (Statement stmt = connection.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
@@ -96,11 +115,12 @@ public class DatabaseService {
             while (rs.next()) {
                 String id = rs.getString("id");
                 String name = rs.getString("name");
+                String model = rs.getString("model");
                 LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
-                sessions.add(new Session(id, name, createdAt));
+                sessions.add(new Session(id, name, model, createdAt));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to get all sessions", e);
         }
 
         return sessions;
@@ -110,7 +130,7 @@ public class DatabaseService {
      * Get a session by ID
      */
     public Session getSession(String id) {
-        String sql = "SELECT id, name, created_at FROM sessions WHERE id = ?";
+        String sql = "SELECT id, name, model, created_at FROM sessions WHERE id = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, id);
@@ -118,28 +138,30 @@ public class DatabaseService {
 
             if (rs.next()) {
                 String name = rs.getString("name");
+                String model = rs.getString("model");
                 LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
-                return new Session(id, name, createdAt);
+                return new Session(id, name, model, createdAt);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to get session", e);
         }
 
         return null;
     }
 
     /**
-     * Update session name
+     * Update a session's name and model
      */
-    public void updateSession(String id, String newName) {
-        String sql = "UPDATE sessions SET name = ? WHERE id = ?";
+    public void updateSession(String id, String newName, String newModel) {
+        String sql = "UPDATE sessions SET name = ?, model = ? WHERE id = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, newName);
-            pstmt.setString(2, id);
+            pstmt.setString(2, newModel);
+            pstmt.setString(3, id);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to update session", e);
             throw new RuntimeException("Failed to update session", e);
         }
     }
@@ -158,9 +180,76 @@ public class DatabaseService {
             if (sessionFolder.exists()) {
                 deleteDirectory(sessionFolder);
             }
+
+            // Delete embedding cache
+            EmbeddingCacheService.deleteCache(id);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to delete session", e);
             throw new RuntimeException("Failed to delete session", e);
+        }
+    }
+
+    /**
+     * Save a chat message to the database
+     */
+    public void saveChatMessage(String sessionId, ChatMessage message) {
+        String sql = "INSERT INTO messages (id, session_id, content, is_user, timestamp, sources) VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, message.getId());
+            pstmt.setString(2, sessionId);
+            pstmt.setString(3, message.getContent());
+            pstmt.setInt(4, message.isUser() ? 1 : 0);
+            pstmt.setString(5, message.getTimestamp().toString());
+            pstmt.setString(6, message.getSources());
+            pstmt.executeUpdate();
+            logger.debug("Saved message {} for session {}", message.getId(), sessionId);
+        } catch (SQLException e) {
+            logger.error("Failed to save chat message", e);
+            throw new RuntimeException("Failed to save chat message", e);
+        }
+    }
+
+    /**
+     * Get all chat messages for a session ordered by timestamp
+     */
+    public List<ChatMessage> getChatHistory(String sessionId) {
+        List<ChatMessage> messages = new ArrayList<>();
+        String sql = "SELECT id, content, is_user, timestamp, sources FROM messages WHERE session_id = ? ORDER BY timestamp ASC";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, sessionId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                String id = rs.getString("id");
+                String content = rs.getString("content");
+                boolean isUser = rs.getInt("is_user") == 1;
+                LocalDateTime timestamp = LocalDateTime.parse(rs.getString("timestamp"));
+                String sources = rs.getString("sources");
+                messages.add(new ChatMessage(id, content, isUser, timestamp, sources));
+            }
+            logger.debug("Loaded {} messages for session {}", messages.size(), sessionId);
+        } catch (SQLException e) {
+            logger.error("Failed to get chat history", e);
+        }
+
+        return messages;
+    }
+
+    /**
+     * Delete all chat messages for a session
+     */
+    public void clearChatHistory(String sessionId) {
+        String sql = "DELETE FROM messages WHERE session_id = ?";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, sessionId);
+            int deleted = pstmt.executeUpdate();
+            logger.info("Cleared {} messages for session {}", deleted, sessionId);
+        } catch (SQLException e) {
+            logger.error("Failed to clear chat history", e);
+            throw new RuntimeException("Failed to clear chat history", e);
         }
     }
 
@@ -190,7 +279,7 @@ public class DatabaseService {
                 connection.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Failed to close database connection", e);
         }
     }
 }

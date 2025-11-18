@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.assignment.model.Resource;
+import dev.assignment.service.RAGService;
 import dev.assignment.service.ResourceService;
 import dev.assignment.view.ProgressDialog;
 import dev.assignment.view.ResourceListCell;
@@ -29,10 +30,26 @@ public class ResourceManagementController {
     private ListView<Resource> resourceListView;
 
     private ResourceService resourceService;
+    private RAGService ragService;
+    private Runnable onResourcesChangedCallback;
 
     public void setResourceService(ResourceService resourceService) {
         this.resourceService = resourceService;
         loadResources();
+    }
+
+    public void setRagService(RAGService ragService) {
+        this.ragService = ragService;
+    }
+
+    public void setOnResourcesChangedCallback(Runnable callback) {
+        this.onResourcesChangedCallback = callback;
+    }
+
+    private void notifyResourcesChanged() {
+        if (onResourcesChangedCallback != null) {
+            onResourcesChangedCallback.run();
+        }
     }
 
     @FXML
@@ -109,13 +126,55 @@ public class ResourceManagementController {
                 if (!overwrite) {
                     return;
                 }
+
+                // Remove old file from index if RAG service is available
+                if (ragService != null) {
+                    try {
+                        ragService.removeFileFromIndexByName(targetFileName);
+                    } catch (Exception e) {
+                        System.err.println("Failed to remove old file from index: " + e.getMessage());
+                    }
+                }
             } else {
                 overwrite = true;
             }
 
             resourceService.importResource(file, overwrite);
-            loadResources();
-            showInfo("Success", "File imported successfully as '" + targetFileName + "'.");
+
+            // Index the file if RAG service is available
+            if (ragService != null) {
+                Stage ownerStage = (Stage) resourceListView.getScene().getWindow();
+                ProgressDialog progressDialog = new ProgressDialog(ownerStage);
+                progressDialog.show();
+
+                new Thread(() -> {
+                    try {
+                        Platform.runLater(
+                                () -> progressDialog.updateProgress(0, 1, "Indexing " + targetFileName + "..."));
+
+                        File importedFile = new File(resourceService.getStoragePath().toFile(), targetFileName);
+                        ragService.indexSingleFile(importedFile);
+
+                        Platform.runLater(() -> {
+                            progressDialog.close();
+                            loadResources();
+                            notifyResourcesChanged();
+                            showInfo("Success", "File imported and indexed successfully as '" + targetFileName + "'.");
+                        });
+                    } catch (Exception e) {
+                        Platform.runLater(() -> {
+                            progressDialog.close();
+                            loadResources();
+                            notifyResourcesChanged();
+                            showError("Indexing Error", "File imported but failed to index: " + e.getMessage());
+                        });
+                    }
+                }).start();
+            } else {
+                loadResources();
+                notifyResourcesChanged();
+                showInfo("Success", "File imported successfully as '" + targetFileName + "'.");
+            }
 
         } catch (IOException e) {
             showError("Import Error", "Failed to import file: " + e.getMessage());
@@ -174,8 +233,6 @@ public class ResourceManagementController {
                 File file = files.get(i);
                 final int currentIndex = i + 1;
 
-                Platform.runLater(() -> progressDialog.updateProgress(currentIndex, total, file.getName()));
-
                 try {
                     String fileName = file.getName();
                     String fileExtension = ResourceService.getFileExtension(fileName).toLowerCase();
@@ -192,7 +249,35 @@ public class ResourceManagementController {
                         continue;
                     }
 
+                    // Remove old file from index if it exists and will be overwritten
+                    if (shouldOverwrite && resourceService.resourceExists(targetFileName) && ragService != null) {
+                        try {
+                            ragService.removeFileFromIndexByName(targetFileName);
+                        } catch (Exception e) {
+                            System.err.println("Failed to remove old file from index: " + e.getMessage());
+                        }
+                    }
+
+                    // Show importing progress
+                    Platform.runLater(() -> progressDialog.updateProgress(currentIndex, total,
+                            "Importing " + file.getName() + "..."));
+
                     resourceService.importResource(file, shouldOverwrite);
+
+                    // Index the file if RAG service is available
+                    if (ragService != null) {
+                        try {
+                            // Show indexing progress
+                            Platform.runLater(() -> progressDialog.updateProgress(currentIndex, total,
+                                    "Indexing " + file.getName() + "..."));
+
+                            File importedFile = new File(resourceService.getStoragePath().toFile(), targetFileName);
+                            ragService.indexSingleFile(importedFile);
+                        } catch (Exception indexError) {
+                            System.err.println("Failed to index " + file.getName() + ": " + indexError.getMessage());
+                        }
+                    }
+
                     successCount++;
                 } catch (Exception e) {
                     failCount++;
@@ -215,6 +300,7 @@ public class ResourceManagementController {
             Platform.runLater(() -> {
                 progressDialog.close();
                 loadResources();
+                notifyResourcesChanged();
 
                 String message = String.format(
                         "Import complete!\n\nSuccessfully imported: %d\nFailed: %d" +
@@ -249,9 +335,22 @@ public class ResourceManagementController {
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
             try {
+                String fileName = selectedResource.getFileName();
+
                 resourceService.deleteResource(selectedResource);
+
+                // Remove from index if RAG service is available
+                if (ragService != null) {
+                    try {
+                        ragService.removeFileFromIndexByName(fileName);
+                    } catch (Exception e) {
+                        System.err.println("Failed to remove file from index: " + e.getMessage());
+                    }
+                }
+
                 loadResources();
-                showInfo("Success", "File '" + selectedResource.getFileName() + "' has been removed.");
+                notifyResourcesChanged();
+                showInfo("Success", "File '" + fileName + "' has been removed.");
             } catch (IOException e) {
                 showError("Delete Error", "Failed to delete file: " + e.getMessage());
             }

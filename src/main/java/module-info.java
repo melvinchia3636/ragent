@@ -20,6 +20,9 @@ module dev.assignment {
     // SQLite JDBC for database storage
     requires java.sql;
 
+    // dotenv-java for loading environment variables
+    requires io.github.cdimascio.dotenv.java;
+
     // Open packages to javafx.fxml for reflection-based access
     opens dev.assignment to javafx.fxml;
     opens dev.assignment.controller to javafx.fxml;

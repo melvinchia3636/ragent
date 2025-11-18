@@ -1,20 +1,15 @@
 package dev.assignment;
 
-import java.io.IOException;
-
-import dev.assignment.controller.ResourceManagementController;
-import dev.assignment.model.Session;
+import dev.assignment.controller.ChatSessionController;
+import dev.assignment.service.APIKeyService;
 import dev.assignment.service.DatabaseService;
-import dev.assignment.service.ResourceService;
 import dev.assignment.view.SessionSidebar;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
 
 public class MainController {
 
@@ -27,78 +22,88 @@ public class MainController {
     @FXML
     private Label sessionCreatedLabel;
 
-    private ResourceService resourceService;
+    @FXML
+    private VBox chatContainer;
+
+    @FXML
+    private ScrollPane chatScrollPane;
+
+    @FXML
+    private TextField messageInput;
+
+    @FXML
+    private Button sendButton;
+
+    @FXML
+    private Label statusLabel;
+
+    @FXML
+    private Label modelLabel;
+
+    @FXML
+    private Button manageKnowledgebaseButton;
+
+    @FXML
+    private Button clearConversationButton;
+
+    private ChatSessionController chatSessionController;
 
     @FXML
     private void initialize() {
         // Initialize database
         DatabaseService.getInstance();
 
+        // Initialize API key service and load key
+        APIKeyService apiKeyService = APIKeyService.getInstance();
+        boolean hasApiKey = apiKeyService.loadApiKey();
+
+        // Update status based on API key availability
+        if (hasApiKey) {
+            statusLabel.setText("API Key loaded from .env");
+        } else {
+            statusLabel.setText("No API Key - Chat disabled");
+            sendButton.setDisable(true);
+            messageInput.setDisable(true);
+        }
+
+        // Initialize chat session controller
+        chatSessionController = new ChatSessionController(
+                sessionNameLabel,
+                sessionCreatedLabel,
+                chatContainer,
+                messageInput,
+                sendButton,
+                statusLabel,
+                modelLabel,
+                manageKnowledgebaseButton,
+                clearConversationButton,
+                sessionSidebar);
+
         // Set up sidebar callbacks
-        sessionSidebar.setOnSessionSelected(this::handleSessionSelected);
-        sessionSidebar.setOnSessionChanged(this::handleSessionChanged);
+        sessionSidebar.setOnSessionSelected(chatSessionController::handleSessionSelected);
+        sessionSidebar.setOnSessionChanged(chatSessionController::handleSessionChanged);
 
         // Load sessions
         sessionSidebar.loadSessions();
-    }
 
-    private void handleSessionSelected(Session session) {
-        resourceService = new ResourceService(session.getId());
-        updateSessionInfo(session);
-    }
-
-    private void handleSessionChanged() {
-        // Reload session info if current session still exists
-        Session currentSession = sessionSidebar.getCurrentSession();
-        if (currentSession != null) {
-            updateSessionInfo(currentSession);
-        } else {
-            updateSessionInfo(null);
-        }
-    }
-
-    private void updateSessionInfo(Session session) {
-        if (session != null) {
-            sessionNameLabel.setText(session.getName());
-            sessionCreatedLabel.setText("Created on " + session.getFormattedCreatedAt());
-        } else {
-            sessionNameLabel.setText("No Session Selected");
-            sessionCreatedLabel.setText("");
-        }
+        // Set up auto-scroll for chat
+        chatContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
+            chatScrollPane.setVvalue(1.0);
+        });
     }
 
     @FXML
     private void handleManageKnowledgebase() {
-        Session currentSession = sessionSidebar.getCurrentSession();
+        chatSessionController.handleManageKnowledgebase();
+    }
 
-        if (currentSession == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("No Session Selected");
-            alert.setHeaderText("Please select or create a session first");
-            alert.showAndWait();
-            return;
-        }
+    @FXML
+    private void handleClearConversation() {
+        chatSessionController.handleClearConversation();
+    }
 
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("manage_resources.fxml"));
-            Parent root = loader.load();
-
-            // Pass resource service to the controller
-            ResourceManagementController controller = loader.getController();
-            controller.setResourceService(resourceService);
-
-            Stage stage = new Stage();
-            stage.setTitle("Manage Knowledgebase - " + currentSession.getName());
-            stage.initModality(Modality.APPLICATION_MODAL);
-
-            Scene scene = new Scene(root, 600, 400);
-            stage.setScene(scene);
-
-            stage.centerOnScreen();
-
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @FXML
+    private void handleSendMessage() {
+        chatSessionController.handleSendMessage();
     }
 }
