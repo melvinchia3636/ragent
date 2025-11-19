@@ -26,13 +26,18 @@ public class DatabaseService {
     private static DatabaseService instance;
     private Connection connection;
 
-    private DatabaseService() {
+    private DatabaseService() throws SQLException {
         initializeDatabase();
     }
 
     public static DatabaseService getInstance() {
         if (instance == null) {
-            instance = new DatabaseService();
+            try {
+                instance = new DatabaseService();
+            } catch (Exception e) {
+                logger.error("Failed to create DatabaseService instance", e);
+                return null;
+            }
         }
         return instance;
     }
@@ -40,14 +45,9 @@ public class DatabaseService {
     /**
      * Initialize database connection and create tables if they don't exist
      */
-    private void initializeDatabase() {
-        try {
-            connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
-            createTables();
-        } catch (SQLException e) {
-            logger.error("Failed to initialize database", e);
-            throw new RuntimeException("Failed to initialize database", e);
-        }
+    private void initializeDatabase() throws SQLException {
+        connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+        createTables();
     }
 
     /**
@@ -58,6 +58,7 @@ public class DatabaseService {
                 "id TEXT PRIMARY KEY, " +
                 "name TEXT NOT NULL, " +
                 "model TEXT NOT NULL DEFAULT 'gpt-4o-mini', " +
+                "use_query_transformation INTEGER NOT NULL DEFAULT 1, " +
                 "created_at TEXT NOT NULL" +
                 ")";
 
@@ -84,20 +85,25 @@ public class DatabaseService {
     public Session createSession(String name) {
         Session session = new Session(name);
 
-        String sql = "INSERT INTO sessions (id, name, model, created_at) VALUES (?, ?, ?, ?)";
+        logger.info("Creating new session: id={}, name='{}', model={}, queryTransformation={}",
+                session.getId(), name, session.getModel(), session.isUseQueryTransformation());
+
+        String sql = "INSERT INTO sessions (id, name, model, use_query_transformation, created_at) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, session.getId());
             pstmt.setString(2, session.getName());
             pstmt.setString(3, session.getModel());
-            pstmt.setString(4, session.getCreatedAt().toString());
+            pstmt.setInt(4, session.isUseQueryTransformation() ? 1 : 0);
+            pstmt.setString(5, session.getCreatedAt().toString());
             pstmt.executeUpdate();
 
             File sessionFolder = new File("knowledgebase_storage/" + session.getId());
             sessionFolder.mkdirs();
 
+            logger.info("Session created successfully: id={}, folder created", session.getId());
             return session;
         } catch (SQLException e) {
-            logger.error("Failed to create session", e);
+            logger.error("Failed to create session: name='{}'", name, e);
             throw new RuntimeException("Failed to create session", e);
         }
     }
@@ -105,9 +111,9 @@ public class DatabaseService {
     /**
      * Get all sessions ordered by creation date (newest first)
      */
-    public List<Session> getAllSessions() {
+    public List<Session> getAllSessions() throws SQLException {
         List<Session> sessions = new ArrayList<>();
-        String sql = "SELECT id, name, model, created_at FROM sessions ORDER BY created_at DESC";
+        String sql = "SELECT id, name, model, use_query_transformation, created_at FROM sessions ORDER BY created_at DESC";
 
         try (Statement stmt = connection.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
@@ -116,11 +122,10 @@ public class DatabaseService {
                 String id = rs.getString("id");
                 String name = rs.getString("name");
                 String model = rs.getString("model");
+                boolean useQueryTransformation = rs.getInt("use_query_transformation") == 1;
                 LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
-                sessions.add(new Session(id, name, model, createdAt));
+                sessions.add(new Session(id, name, model, useQueryTransformation, createdAt));
             }
-        } catch (SQLException e) {
-            logger.error("Failed to get all sessions", e);
         }
 
         return sessions;
@@ -130,7 +135,7 @@ public class DatabaseService {
      * Get a session by ID
      */
     public Session getSession(String id) {
-        String sql = "SELECT id, name, model, created_at FROM sessions WHERE id = ?";
+        String sql = "SELECT id, name, model, use_query_transformation, created_at FROM sessions WHERE id = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, id);
@@ -139,29 +144,47 @@ public class DatabaseService {
             if (rs.next()) {
                 String name = rs.getString("name");
                 String model = rs.getString("model");
+                int useQueryTransformationInt = rs.getInt("use_query_transformation");
+                boolean useQueryTransformation = useQueryTransformationInt == 1;
                 LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
-                return new Session(id, name, model, createdAt);
+
+                logger.debug("Retrieved session: id={}, name='{}', model={}, queryTransformation={}",
+                        id, name, model, useQueryTransformation);
+
+                return new Session(id, name, model, useQueryTransformation, createdAt);
+            } else {
+                logger.debug("No session found with id: {}", id);
             }
         } catch (SQLException e) {
-            logger.error("Failed to get session", e);
+            logger.error("Failed to get session: id={}", id, e);
         }
 
         return null;
     }
 
     /**
-     * Update a session's name and model
+     * Update a session's name, model, and query transformation setting
      */
-    public void updateSession(String id, String newName, String newModel) {
-        String sql = "UPDATE sessions SET name = ?, model = ? WHERE id = ?";
+    public void updateSession(String id, String newName, String newModel, boolean useQueryTransformation) {
+        String sql = "UPDATE sessions SET name = ?, model = ?, use_query_transformation = ? WHERE id = ?";
+
+        logger.info("Updating session: id={}, name='{}', model={}, queryTransformation={}",
+                id, newName, newModel, useQueryTransformation);
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, newName);
             pstmt.setString(2, newModel);
-            pstmt.setString(3, id);
-            pstmt.executeUpdate();
+            pstmt.setInt(3, useQueryTransformation ? 1 : 0);
+            pstmt.setString(4, id);
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                logger.info("Session updated successfully: {} row(s) affected", rowsAffected);
+            } else {
+                logger.warn("No session found with id: {}", id);
+            }
         } catch (SQLException e) {
-            logger.error("Failed to update session", e);
+            logger.error("Failed to update session: id={}, name='{}'", id, newName, e);
             throw new RuntimeException("Failed to update session", e);
         }
     }
@@ -172,19 +195,25 @@ public class DatabaseService {
     public void deleteSession(String id) {
         String sql = "DELETE FROM sessions WHERE id = ?";
 
+        logger.info("Deleting session: id={}", id);
+
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, id);
-            pstmt.executeUpdate();
+            int rowsAffected = pstmt.executeUpdate();
+
+            logger.info("Session deleted from database: {} row(s) affected", rowsAffected);
 
             File sessionFolder = new File("knowledgebase_storage/" + id);
             if (sessionFolder.exists()) {
                 deleteDirectory(sessionFolder);
+                logger.info("Session folder deleted: {}", sessionFolder.getPath());
             }
 
             // Delete embedding cache
             EmbeddingCacheService.deleteCache(id);
+            logger.info("Session deletion complete: id={}", id);
         } catch (SQLException e) {
-            logger.error("Failed to delete session", e);
+            logger.error("Failed to delete session: id={}", id, e);
             throw new RuntimeException("Failed to delete session", e);
         }
     }

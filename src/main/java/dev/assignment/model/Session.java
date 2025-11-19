@@ -13,6 +13,7 @@ public class Session {
     private final String id;
     private String name;
     private String model;
+    private boolean useQueryTransformation;
     private final LocalDateTime createdAt;
 
     /**
@@ -22,16 +23,18 @@ public class Session {
         this.id = UUID.randomUUID().toString();
         this.name = name;
         this.model = Constants.DEFAULT_MODEL;
+        this.useQueryTransformation = true; // Default enabled
         this.createdAt = LocalDateTime.now();
     }
 
     /**
      * Load existing session from database
      */
-    public Session(String id, String name, String model, LocalDateTime createdAt) {
+    public Session(String id, String name, String model, boolean useQueryTransformation, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.model = model;
+        this.useQueryTransformation = useQueryTransformation;
         this.createdAt = createdAt;
     }
 
@@ -53,6 +56,14 @@ public class Session {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public boolean isUseQueryTransformation() {
+        return useQueryTransformation;
+    }
+
+    public void setUseQueryTransformation(boolean useQueryTransformation) {
+        this.useQueryTransformation = useQueryTransformation;
     }
 
     public LocalDateTime getCreatedAt() {

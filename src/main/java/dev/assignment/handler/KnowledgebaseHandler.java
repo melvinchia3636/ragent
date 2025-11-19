@@ -53,10 +53,12 @@ public class KnowledgebaseHandler {
     public void initializeSession() {
         Session currentSession = sessionStateHandler.getCurrentSession();
         if (currentSession == null) {
+            logger.warn("Cannot initialize: No session selected");
             return;
         }
 
-        logger.info("Initializing session: {}", currentSession.getName());
+        logger.info("========== Initializing Session ==========");
+        logger.info("Session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
 
         // Clear chat
         chatContainer.getChildren().clear();
@@ -64,7 +66,8 @@ public class KnowledgebaseHandler {
         APIKeyService apiKeyService = APIKeyService.getInstance();
         if (!apiKeyService.hasApiKey()) {
             sessionStateHandler.setInputControlsDisabled(true);
-            logger.warn("No API key - chat disabled");
+            logger.warn("API key not available - chat functionality disabled for session: {}",
+                    currentSession.getName());
             return;
         }
 
@@ -85,9 +88,12 @@ public class KnowledgebaseHandler {
             // Disable input
             sessionStateHandler.setInputControlsDisabled(true);
             statusLabel.setText("Knowledge base is empty");
-            logger.info("Knowledge base is empty for session: {}", currentSession.getName());
+            logger.info("Knowledge base empty for session '{}' - {} resources found",
+                    currentSession.getName(), resources.size());
             return;
         }
+
+        logger.info("Knowledge base has {} resources, proceeding with indexing", resources.size());
 
         // Disable inputs before indexing
         sessionStateHandler.setInputControlsDisabled(true);

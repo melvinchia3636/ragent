@@ -62,17 +62,20 @@ public class MessageHandler {
 
         RAGService ragService = sessionStateHandler.getRagService();
         if (ragService == null) {
-            logger.warn("Attempted to send message without RAG service");
+            logger.warn("Cannot send message: RAG service not initialized (API key may be missing)");
             return;
         }
 
         Session currentSession = sessionStateHandler.getCurrentSession();
         if (currentSession == null) {
-            logger.warn("Attempted to send message without session");
+            logger.error("Cannot send message: No session selected");
             return;
         }
 
-        logger.info("Sending message: {}", userMessage);
+        logger.info("========== Sending Message ==========");
+        logger.info("Session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
+        logger.info("Message length: {} characters", userMessage.length());
+        logger.debug("Message content: {}", userMessage);
 
         // Clear input
         messageInput.clear();
@@ -86,7 +89,10 @@ public class MessageHandler {
         chatContainer.getChildren().add(userMessageBox);
 
         // Save user message to database
-        DatabaseService.getInstance().saveChatMessage(currentSession.getId(), userChatMessage);
+        DatabaseService databaseService = DatabaseService.getInstance();
+        if (databaseService != null) {
+            databaseService.saveChatMessage(currentSession.getId(), userChatMessage);
+        }
 
         // Create placeholder for AI response
         ChatMessage aiChatMessage = new ChatMessage("...", false);
@@ -104,6 +110,14 @@ public class MessageHandler {
                 ragService.queryStreaming(finalUserMessage, new RAGService.StreamingCallback() {
                     private final StringBuilder responseBuilder = new StringBuilder();
                     private java.util.List<String> sources = new java.util.ArrayList<>();
+
+                    @Override
+                    public void onProgress(String progressMessage) {
+                        Platform.runLater(() -> {
+                            // Show progress in the reference label while processing
+                            aiMessageBox.setSources(progressMessage);
+                        });
+                    }
 
                     @Override
                     public void onStart(java.util.List<String> sourceDocs) {
@@ -133,7 +147,10 @@ public class MessageHandler {
 
                             // Create final AI message with sources and save to database
                             ChatMessage finalAiMessage = new ChatMessage(fullResponse, false, sourcesText);
-                            DatabaseService.getInstance().saveChatMessage(currentSession.getId(), finalAiMessage);
+                            DatabaseService databaseService = DatabaseService.getInstance();
+                            if (databaseService != null) {
+                                databaseService.saveChatMessage(currentSession.getId(), finalAiMessage);
+                            }
 
                             // Re-enable all controls
                             toggleAllControlsCallback.run();
@@ -144,7 +161,10 @@ public class MessageHandler {
 
                     @Override
                     public void onError(Throwable error) {
-                        logger.error("Error getting response", error);
+                        logger.error("========== Error Getting Response ==========");
+                        logger.error("Session: {}", currentSession.getName());
+                        logger.error("Error type: {}", error.getClass().getSimpleName());
+                        logger.error("Error message: {}", error.getMessage(), error);
                         Platform.runLater(() -> {
                             // Remove placeholder AI message
                             chatContainer.getChildren().remove(aiMessageBox);
@@ -159,7 +179,10 @@ public class MessageHandler {
                     }
                 });
             } catch (Exception e) {
-                logger.error("Error initiating streaming query", e);
+                logger.error("========== Error Initiating Streaming Query ==========");
+                logger.error("Session: {}", currentSession.getName());
+                logger.error("Exception type: {}", e.getClass().getSimpleName());
+                logger.error("Exception details", e);
                 Platform.runLater(() -> {
                     // Remove placeholder AI message
                     chatContainer.getChildren().remove(aiMessageBox);

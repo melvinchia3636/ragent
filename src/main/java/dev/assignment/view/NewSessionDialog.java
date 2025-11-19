@@ -6,9 +6,11 @@ import dev.assignment.util.Constants;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 
 /**
@@ -19,6 +21,7 @@ public class NewSessionDialog {
     private final Alert dialog;
     private final TextField nameField;
     private final ComboBox<String> modelComboBox;
+    private final CheckBox queryTransformationCheckBox;
 
     /**
      * Create a new session dialog
@@ -39,6 +42,11 @@ public class NewSessionDialog {
         modelComboBox.setValue(Constants.DEFAULT_MODEL);
         modelComboBox.setPrefWidth(300);
 
+        queryTransformationCheckBox = new CheckBox("Enable Query Transformation");
+        queryTransformationCheckBox.setSelected(true); // Enabled by default
+        queryTransformationCheckBox.setTooltip(
+                new Tooltip("When enabled, generates multiple query variations for better retrieval coverage"));
+
         // Create layout
         VBox content = new VBox(10);
         content.setPadding(new Insets(10));
@@ -46,7 +54,8 @@ public class NewSessionDialog {
                 nameLabel,
                 nameField,
                 modelLabel,
-                modelComboBox);
+                modelComboBox,
+                queryTransformationCheckBox);
 
         dialog.getDialogPane().setContent(content);
 
@@ -76,14 +85,25 @@ public class NewSessionDialog {
     private Session createSession() {
         String name = nameField.getText().trim();
         String model = modelComboBox.getValue();
+        boolean useQueryTransformation = queryTransformationCheckBox.isSelected();
 
         if (name.isEmpty()) {
             return null;
         }
 
-        Session newSession = DatabaseService.getInstance().createSession(name);
+        DatabaseService databaseService = DatabaseService.getInstance();
+        if (databaseService == null) {
+            dev.assignment.view.AlertHelper.showError(
+                    "Database Error",
+                    "Cannot Create Session",
+                    "The database is unavailable. Please restart the application.");
+            return null;
+        }
+
+        Session newSession = databaseService.createSession(name);
         newSession.setModel(model);
-        DatabaseService.getInstance().updateSession(newSession.getId(), name, model);
+        newSession.setUseQueryTransformation(useQueryTransformation);
+        databaseService.updateSession(newSession.getId(), name, model, useQueryTransformation);
 
         return newSession;
     }

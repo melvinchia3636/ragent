@@ -27,6 +27,9 @@ public class ChatSessionController {
     private final Button clearSessionButton;
     private final SessionSidebar sessionSidebar;
 
+    // Processing state
+    private boolean isProcessing = false;
+
     // Handlers
     private final SessionStateHandler sessionStateHandler;
     private final ChatHistoryHandler chatHistoryHandler;
@@ -67,7 +70,7 @@ public class ChatSessionController {
                 messageInput,
                 statusLabel,
                 sessionStateHandler,
-                () -> toggleDisabilityOfAllControls(false));
+                this::toggleControlsDuringProcessing);
 
         this.knowledgebaseHandler = new KnowledgebaseHandler(
                 chatContainer,
@@ -108,6 +111,15 @@ public class ChatSessionController {
         if (sessionSidebar != null) {
             sessionSidebar.setDisable(disable);
         }
+    }
+
+    /**
+     * Toggle controls during message processing.
+     * Called before processing starts and after it completes.
+     */
+    private void toggleControlsDuringProcessing() {
+        isProcessing = !isProcessing;
+        toggleDisabilityOfAllControls(isProcessing);
     }
 
     /**

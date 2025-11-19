@@ -49,6 +49,8 @@ public class RAGService {
     private final Map<String, Long> indexedFiles; // filename -> last modified timestamp
     private final DocumentIndexingService indexingService;
     private final RerankingService rerankingService;
+    private final QueryTransformationService queryTransformationService;
+    private final boolean useQueryTransformation;
 
     // Progress callback interface
     public interface ProgressCallback {
@@ -61,9 +63,10 @@ public class RAGService {
 
     private final String sessionId;
 
-    public RAGService(String sessionId, String modelName) {
+    public RAGService(String sessionId, String modelName, boolean useQueryTransformation) {
         this.sessionId = sessionId;
         this.modelName = modelName;
+        this.useQueryTransformation = useQueryTransformation;
         this.sessionHistory = new ArrayList<>();
         this.indexedFiles = new HashMap<>();
         String apiKey = APIKeyService.getInstance().getApiKey();
@@ -87,6 +90,7 @@ public class RAGService {
 
         this.indexingService = new DocumentIndexingService(sessionId, embeddingModel, embeddingStore, indexedFiles);
         this.rerankingService = new RerankingService();
+        this.queryTransformationService = new QueryTransformationService(chatModel);
 
         // Add system message
         sessionHistory.add(SystemMessage.from(
@@ -167,20 +171,37 @@ public class RAGService {
         // Build contextualized query by incorporating recent session history
         String contextualizedQuery = buildContextualizedQuery(userMessage);
 
-        // Find relevant segments using the contextualized query
-        Embedding queryEmbedding = embeddingModel.embed(contextualizedQuery).content();
+        // Generate query variations for multi-query retrieval (if enabled)
+        List<String> queryVariations;
+        if (useQueryTransformation) {
+            queryVariations = queryTransformationService.generateQueryVariations(contextualizedQuery);
+            logger.debug("Using {} query variations for retrieval", queryVariations.size());
+        } else {
+            queryVariations = List.of(contextualizedQuery);
+            logger.debug("Query transformation disabled, using single query");
+        }
 
-        EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
-                .queryEmbedding(queryEmbedding)
-                .maxResults(MAX_RESULTS_BEFORE_RERANK)
-                .minScore(MIN_SCORE)
-                .build();
+        // Perform multi-query retrieval: search with all variations and merge results
+        Set<EmbeddingMatch<TextSegment>> allMatches = new HashSet<>();
+        for (String queryVariation : queryVariations) {
+            Embedding queryEmbedding = embeddingModel.embed(queryVariation).content();
 
-        EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
-        List<EmbeddingMatch<TextSegment>> relevantSegments = searchResult.matches();
+            EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
+                    .queryEmbedding(queryEmbedding)
+                    .maxResults(MAX_RESULTS_BEFORE_RERANK)
+                    .minScore(MIN_SCORE)
+                    .build();
 
-        // Re-rank the results using the original user message
-        List<EmbeddingMatch<TextSegment>> rerankedSegments = rerankingService.rerank(userMessage, relevantSegments);
+            EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
+            allMatches.addAll(searchResult.matches());
+        }
+
+        List<EmbeddingMatch<TextSegment>> relevantSegments = new ArrayList<>(allMatches);
+        logger.debug("Multi-query retrieval found {} unique segments", relevantSegments.size());
+
+        // Re-rank the results using the contextualized query for consistency
+        List<EmbeddingMatch<TextSegment>> rerankedSegments = rerankingService.rerank(contextualizedQuery,
+                relevantSegments);
 
         // Take only top MAX_RESULTS after re-ranking
         if (rerankedSegments.size() > MAX_RESULTS) {
@@ -248,6 +269,8 @@ public class RAGService {
      * Callback interface for streaming responses
      */
     public interface StreamingCallback {
+        void onProgress(String progressMessage);
+
         void onStart(List<String> sources);
 
         void onNext(String token);
@@ -261,34 +284,78 @@ public class RAGService {
      * Query with streaming response
      */
     public void queryStreaming(String userMessage, StreamingCallback callback) {
-        logger.info("Processing streaming query: {}", userMessage);
+        logger.info("========== Processing Streaming Query ==========");
+        logger.info("User message: {}", userMessage);
+        logger.info("Message length: {} characters", userMessage.length());
+        logger.info("Query transformation enabled: {}", useQueryTransformation);
 
         try {
-            // Build contextualized query for better retrieval
+            // Step 1: Contextualization
+            logger.info("Step 1/5: Analyzing query context");
+            callback.onProgress("Analyzing query context...");
             String contextualizedQuery = buildContextualizedQuery(userMessage);
+            logger.debug("Contextualized query: {}", contextualizedQuery);
+            logger.debug("Session history size: {} messages", sessionHistory.size());
 
-            // Embed the contextualized query
-            Embedding queryEmbedding = embeddingModel.embed(contextualizedQuery).content();
+            // Step 2: Query transformation (if enabled)
+            logger.info("Step 2/5: Query transformation");
+            List<String> queryVariations;
+            if (useQueryTransformation) {
+                callback.onProgress("Generating query variations...");
+                queryVariations = queryTransformationService.generateQueryVariations(contextualizedQuery);
+                logger.info("Generated {} query variations (original + {} alternatives)",
+                        queryVariations.size(), queryVariations.size() - 1);
+                for (int i = 0; i < queryVariations.size(); i++) {
+                    logger.debug("Variation {}: {}", i + 1, queryVariations.get(i));
+                }
+            } else {
+                queryVariations = List.of(contextualizedQuery);
+                logger.info("Query transformation disabled, using single query");
+            }
 
-            // Search for relevant segments (retrieve more for re-ranking)
-            EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
-                    .queryEmbedding(queryEmbedding)
-                    .maxResults(MAX_RESULTS_BEFORE_RERANK)
-                    .minScore(MIN_SCORE)
-                    .build();
+            // Step 3: Multi-query retrieval
+            logger.info("Step 3/5: Searching knowledgebase with {} variation(s)", queryVariations.size());
+            callback.onProgress("Searching knowledgebase (" + queryVariations.size() + " variation"
+                    + (queryVariations.size() > 1 ? "s" : "") + ")...");
+            Set<EmbeddingMatch<TextSegment>> allMatches = new HashSet<>();
 
-            EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
-            List<EmbeddingMatch<TextSegment>> matches = searchResult.matches();
+            for (int i = 0; i < queryVariations.size(); i++) {
+                String queryVariation = queryVariations.get(i);
+                logger.debug("Searching with variation {}: {}", i + 1, queryVariation);
 
-            logger.debug("Found {} segments before re-ranking", matches.size());
+                Embedding queryEmbedding = embeddingModel.embed(queryVariation).content();
 
-            // Re-rank using the original user message (not contextualized)
-            List<EmbeddingMatch<TextSegment>> rerankedSegments = rerankingService.rerank(userMessage, matches);
+                EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
+                        .queryEmbedding(queryEmbedding)
+                        .maxResults(MAX_RESULTS_BEFORE_RERANK)
+                        .minScore(MIN_SCORE)
+                        .build();
+
+                EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
+                int previousSize = allMatches.size();
+                allMatches.addAll(searchResult.matches());
+                logger.debug("Variation {} retrieved {} segments ({} new, {} duplicates)",
+                        i + 1, searchResult.matches().size(),
+                        allMatches.size() - previousSize,
+                        searchResult.matches().size() - (allMatches.size() - previousSize));
+            }
+
+            List<EmbeddingMatch<TextSegment>> matches = new ArrayList<>(allMatches);
+            logger.info("Multi-query retrieval complete: {} unique segments found", matches.size());
+
+            // Step 4: Re-ranking
+            logger.info("Step 4/5: Re-ranking {} segments", matches.size());
+            callback.onProgress("Re-ranking results (" + matches.size() + " segments)...");
+
+            // Re-rank using the contextualized query for consistency with retrieval
+            List<EmbeddingMatch<TextSegment>> rerankedSegments = rerankingService.rerank(contextualizedQuery, matches);
 
             // Take top MAX_RESULTS after re-ranking
+            int beforeLimit = rerankedSegments.size();
             rerankedSegments = rerankedSegments.stream()
                     .limit(MAX_RESULTS)
                     .collect(Collectors.toList());
+            logger.info("Re-ranking complete: keeping top {} of {} segments", rerankedSegments.size(), beforeLimit);
 
             // Extract unique source files
             Set<String> sourceFiles = new HashSet<>();
@@ -299,6 +366,12 @@ public class RAGService {
                     sourceFiles.add(fileName);
                 }
             }
+            logger.info("Sources: {} segments from {} files: {}",
+                    rerankedSegments.size(), sourceFiles.size(), sourceFiles);
+
+            // Step 5: Generating response
+            logger.info("Step 5/5: Generating AI response");
+            callback.onProgress("Generating response...");
 
             // Notify callback with sources
             callback.onStart(new ArrayList<>(sourceFiles));
@@ -310,26 +383,36 @@ public class RAGService {
                 for (EmbeddingMatch<TextSegment> match : rerankedSegments) {
                     context.append(match.embedded().text()).append("\n\n");
                 }
+                logger.debug("Context built: {} characters from {} segments",
+                        context.length(), rerankedSegments.size());
+            } else {
+                logger.warn("No relevant context found for query");
             }
 
             // Build the message with context for the current query
             String messageWithContext;
             if (context.length() > 0) {
                 messageWithContext = context + "\nUser question: " + userMessage;
+                logger.debug("Final message with context: {} characters", messageWithContext.length());
             } else {
                 messageWithContext = userMessage;
+                logger.debug("No context available, using original message");
             }
 
             // Add user message to session history (without RAG context)
             sessionHistory.add(UserMessage.from(userMessage));
+            logger.debug("Added user message to session history (total: {})", sessionHistory.size());
 
             // Build chat request with session history + current RAG context
             List<ChatMessage> messagesForRequest = new ArrayList<>(sessionHistory);
             messagesForRequest.set(messagesForRequest.size() - 1, UserMessage.from(messageWithContext));
+            logger.debug("Prepared {} messages for chat model", messagesForRequest.size());
 
             ChatRequest chatRequest = ChatRequest.builder()
                     .messages(messagesForRequest)
                     .build();
+
+            logger.info("Initiating streaming chat with model: {}", modelName);
 
             // Stream the response
             StringBuilder fullResponse = new StringBuilder();
@@ -345,17 +428,25 @@ public class RAGService {
                 public void onCompleteResponse(ChatResponse completeResponse) {
                     String responseText = fullResponse.toString();
                     sessionHistory.add(AiMessage.from(responseText));
+                    logger.info("Response complete: {} characters, session history now has {} messages",
+                            responseText.length(), sessionHistory.size());
+                    logger.info("========== Streaming Query Complete ==========");
                     callback.onComplete(responseText);
                 }
 
                 @Override
                 public void onError(Throwable error) {
+                    logger.error("========== Streaming Query Error ==========");
+                    logger.error("Error type: {}", error.getClass().getSimpleName());
+                    logger.error("Error details", error);
                     callback.onError(error);
                 }
             });
 
         } catch (Exception e) {
-            logger.error("Error during streaming query", e);
+            logger.error("========== Exception During Streaming Query ==========");
+            logger.error("Exception type: {}", e.getClass().getSimpleName());
+            logger.error("Exception details", e);
             callback.onError(e);
         }
     }

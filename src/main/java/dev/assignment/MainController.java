@@ -52,7 +52,24 @@ public class MainController {
     @FXML
     private void initialize() {
         // Initialize database
-        DatabaseService.getInstance();
+        DatabaseService databaseService = DatabaseService.getInstance();
+        if (databaseService == null) {
+            AlertHelper.showError(
+                    "Database Error",
+                    "Failed to Initialize Database",
+                    "The application database could not be initialized. Please check file permissions and disk space.\\n\\nThe application will continue with limited functionality.");
+
+            // Disable session-related features
+            if (sessionSidebar != null) {
+                sessionSidebar.setDisable(true);
+            }
+            sendButton.setDisable(true);
+            messageInput.setDisable(true);
+            manageKnowledgebaseButton.setDisable(true);
+            clearSessionButton.setDisable(true);
+            statusLabel.setText("Database unavailable");
+            return;
+        }
 
         // Initialize API key service and load key
         APIKeyService apiKeyService = APIKeyService.getInstance();

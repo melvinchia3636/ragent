@@ -94,8 +94,36 @@ public class SessionSidebar extends VBox {
      * Load sessions from the database and display them in the sidebar
      */
     public void loadSessions() {
-        sessions = FXCollections.observableArrayList(
-                DatabaseService.getInstance().getAllSessions());
+        DatabaseService databaseService = DatabaseService.getInstance();
+        if (databaseService == null) {
+            sessions = FXCollections.observableArrayList();
+            sessionListContainer.getChildren().clear();
+
+            Label errorLabel = new Label("Database unavailable");
+            errorLabel.setStyle("-fx-text-fill: #ff0000; -fx-font-size: 13px;");
+            errorLabel.setMaxWidth(Double.MAX_VALUE);
+            errorLabel.setAlignment(Pos.CENTER);
+            sessionListContainer.getChildren().add(errorLabel);
+            return;
+        }
+
+        try {
+            sessions = FXCollections.observableArrayList(
+                    databaseService.getAllSessions());
+        } catch (java.sql.SQLException e) {
+            // Database schema mismatch - likely missing column from old database
+            AlertHelper.showError(
+                    "Database Error",
+                    "Database Schema Incompatible",
+                    "The database schema is incompatible with this version of the application.\\n\\n" +
+                            "Please delete the 'rag_sessions.db' file and restart the application.\\n\\n" +
+                            "Error: " + e.getMessage());
+
+            // Exit the application
+            javafx.application.Platform.exit();
+            System.exit(1);
+            return;
+        }
 
         sessionListContainer.getChildren().clear();
 
@@ -124,8 +152,11 @@ public class SessionSidebar extends VBox {
      * Handle session changes (rename, delete, etc.) and notify parent controller
      */
     private void handleSessionChanged() {
+        System.out.println("[SessionSidebar] handleSessionChanged called");
+
         // Check if the current session still exists before reloading
         String currentSessionId = currentSession != null ? currentSession.getId() : null;
+        System.out.println("[SessionSidebar] Current session ID: " + currentSessionId);
 
         loadSessions();
 
@@ -133,13 +164,17 @@ public class SessionSidebar extends VBox {
         if (currentSessionId != null) {
             boolean sessionStillExists = sessions.stream()
                     .anyMatch(s -> s.getId().equals(currentSessionId));
+            System.out.println("[SessionSidebar] Session still exists: " + sessionStillExists);
             if (!sessionStillExists) {
                 currentSession = null;
             }
         }
 
         if (onSessionChanged != null) {
+            System.out.println("[SessionSidebar] Calling parent onSessionChanged callback");
             onSessionChanged.run();
+        } else {
+            System.out.println("[SessionSidebar] WARNING: parent onSessionChanged is null!");
         }
     }
 

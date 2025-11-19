@@ -11,7 +11,7 @@ import javafx.scene.layout.VBox;
 /**
  * Custom component for displaying a chat message
  */
-public class ChatMessageEntry extends VBox {
+public final class ChatMessageEntry extends VBox {
 
     private final Label messageLabel;
     private Label sourcesLabel;
@@ -49,21 +49,12 @@ public class ChatMessageEntry extends VBox {
 
         messageContainer.getChildren().add(messageLabel);
 
+        // Add message container first
+        getChildren().add(messageContainer);
+
         // Add sources label if available (for AI messages)
         if (!message.isUser() && message.hasSources()) {
-            this.sourcesLabel = new Label("Referenced from: " + message.getSources());
-            sourcesLabel.setStyle("-fx-text-fill: #909090; -fx-font-size: 11px;");
-            sourcesLabel.setMaxWidth(Double.MAX_VALUE);
-            sourcesLabel.setAlignment(Pos.CENTER_LEFT);
-            sourcesLabel.setPadding(new Insets(2, 0, 5, 0));
-            sourcesLabel.setWrapText(true);
-            sourcesLabel.setMaxWidth(500);
-            sourcesLabel.setMinHeight(Region.USE_PREF_SIZE);
-
-            getChildren().addAll(sourcesLabel, messageContainer);
-        } else {
-            this.sourcesLabel = null;
-            getChildren().add(messageContainer);
+            setSources(message.getSources());
         }
 
         setSpacing(0);
@@ -88,10 +79,10 @@ public class ChatMessageEntry extends VBox {
      */
     public void setSources(String sources) {
         if (sourcesLabel != null) {
-            sourcesLabel.setText("Referenced from: " + sources);
+            sourcesLabel.setText(sources);
         } else if (!isUserMessage) {
             // Create the sources label if it doesn't exist yet (for streaming responses)
-            sourcesLabel = new Label("Referenced from: " + sources);
+            sourcesLabel = new Label(sources);
             sourcesLabel.setStyle("-fx-text-fill: #909090; -fx-font-size: 11px;");
             sourcesLabel.setMaxWidth(Double.MAX_VALUE);
             sourcesLabel.setAlignment(Pos.CENTER_LEFT);

@@ -59,15 +59,30 @@ public class SessionStateHandler {
      * Set the current session.
      */
     public void setCurrentSession(Session session) {
+        if (session != null) {
+            logger.info("Setting current session: id={}, name='{}', model={}, queryTransformation={}",
+                    session.getId(), session.getName(), session.getModel(), session.isUseQueryTransformation());
+        } else {
+            logger.info("Clearing current session");
+        }
+
         this.currentSession = session;
         if (session != null) {
             this.resourceService = new ResourceService(session.getId());
+            logger.debug("Initialized ResourceService for session: {}", session.getId());
+
             if (APIKeyService.getInstance().hasApiKey()) {
-                this.ragService = new RAGService(session.getId(), session.getModel());
+                this.ragService = new RAGService(session.getId(), session.getModel(),
+                        session.isUseQueryTransformation());
+                logger.info("Initialized RAGService with model={}, queryTransformation={}",
+                        session.getModel(), session.isUseQueryTransformation());
+            } else {
+                logger.warn("API key not available, RAGService not initialized");
             }
         } else {
             this.resourceService = null;
             this.ragService = null;
+            logger.debug("Cleared ResourceService and RAGService");
         }
     }
 
@@ -90,7 +105,15 @@ public class SessionStateHandler {
      */
     public void updateRagService(String newModel) {
         if (currentSession != null) {
-            this.ragService = new RAGService(currentSession.getId(), newModel);
+            logger.info("Updating RAGService: sessionId={}, model={}, queryTransformation={}",
+                    currentSession.getId(), newModel, currentSession.isUseQueryTransformation());
+
+            this.ragService = new RAGService(currentSession.getId(), newModel,
+                    currentSession.isUseQueryTransformation());
+
+            logger.info("RAGService successfully updated");
+        } else {
+            logger.warn("Cannot update RAGService: currentSession is null");
         }
     }
 
@@ -98,31 +121,73 @@ public class SessionStateHandler {
      * Handle session changes (update, delete, etc.)
      */
     public void handleSessionChanged() {
-        logger.info("Session changed event");
-        if (currentSession != null) {
-            Session updatedSession = DatabaseService.getInstance().getSession(currentSession.getId());
-            if (updatedSession != null) {
-                String oldModel = currentSession.getModel();
-                String newModel = updatedSession.getModel();
-                boolean modelChanged = !oldModel.equals(newModel);
+        logger.info("========== Session Changed Event ==========");
 
-                logger.info("Session update - Old model: {}, New model: {}, Changed: {}",
-                        oldModel, newModel, modelChanged);
-
-                currentSession = updatedSession;
-                updateSessionInfoDisplay(currentSession);
-                if (modelChanged && ragService != null) {
-                    logger.info("Model changed from {} to {}, reinitializing RAGService", oldModel, newModel);
-                    updateRagService(newModel);
-                }
-            } else {
-                logger.info("Current session was deleted, clearing session state");
-                setCurrentSession(null);
-                updateSessionInfoDisplay(null);
-            }
-        } else {
+        if (currentSession == null) {
+            logger.info("No current session, clearing UI display");
             updateSessionInfoDisplay(null);
+            return;
         }
+
+        logger.info("Current session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
+
+        DatabaseService databaseService = DatabaseService.getInstance();
+        if (databaseService == null) {
+            logger.error("Database unavailable, cannot refresh session");
+            return;
+        }
+
+        Session updatedSession = databaseService.getSession(currentSession.getId());
+        if (updatedSession == null) {
+            logger.info("Session deleted from database: id={}, name='{}'",
+                    currentSession.getId(), currentSession.getName());
+            setCurrentSession(null);
+            updateSessionInfoDisplay(null);
+            return;
+        }
+
+        // Detect changes
+        String oldModel = currentSession.getModel();
+        String newModel = updatedSession.getModel();
+        String oldName = currentSession.getName();
+        String newName = updatedSession.getName();
+        boolean oldUseQueryTransformation = currentSession.isUseQueryTransformation();
+        boolean newUseQueryTransformation = updatedSession.isUseQueryTransformation();
+
+        boolean nameChanged = !oldName.equals(newName);
+        boolean modelChanged = !oldModel.equals(newModel);
+        boolean queryTransformationChanged = oldUseQueryTransformation != newUseQueryTransformation;
+
+        // Log all changes
+        if (nameChanged) {
+            logger.info("Session name changed: '{}' -> '{}'", oldName, newName);
+        }
+        if (modelChanged) {
+            logger.info("Model changed: {} -> {}", oldModel, newModel);
+        }
+        if (queryTransformationChanged) {
+            logger.info("Query transformation changed: {} -> {}", oldUseQueryTransformation, newUseQueryTransformation);
+        }
+
+        if (!nameChanged && !modelChanged && !queryTransformationChanged) {
+            logger.debug("No changes detected in session properties");
+        }
+
+        // Update current session reference
+        currentSession = updatedSession;
+        updateSessionInfoDisplay(currentSession);
+
+        // Reinitialize RAGService if needed
+        if ((modelChanged || queryTransformationChanged)) {
+            if (!APIKeyService.getInstance().hasApiKey()) {
+                logger.warn("API key not available, cannot reinitialize RAGService");
+            } else {
+                logger.info("RAG configuration changed, reinitializing RAGService");
+                updateRagService(newModel);
+            }
+        }
+
+        logger.info("========== Session Update Complete ==========");
     }
 
     /**
@@ -130,15 +195,26 @@ public class SessionStateHandler {
      */
     public void updateSessionInfoDisplay(Session session) {
         if (session != null) {
+            logger.debug("Updating UI display for session: id={}, name='{}'",
+                    session.getId(), session.getName());
+
             sessionNameLabel.setText(session.getName());
             sessionCreatedLabel.setText("Created on " + session.getFormattedCreatedAt());
-            modelLabel.setText("Model: " + session.getModel());
+
+            String queryTransformationStatus = session.isUseQueryTransformation()
+                    ? "enabled"
+                    : "disabled";
+            modelLabel.setText(session.getModel() + " (query transformation " + queryTransformationStatus + ")");
+
             manageKnowledgebaseButton.setVisible(true);
             manageKnowledgebaseButton.setManaged(true);
             clearSessionButton.setVisible(true);
             clearSessionButton.setManaged(true);
-            logger.debug("Updated session info: {}", session.getName());
+
+            logger.debug("UI display updated successfully");
         } else {
+            logger.debug("Clearing UI display (no session)");
+
             sessionNameLabel.setText("No Session Selected");
             sessionCreatedLabel.setText("");
             modelLabel.setText("");
@@ -147,7 +223,8 @@ public class SessionStateHandler {
             clearSessionButton.setVisible(false);
             clearSessionButton.setManaged(false);
             setInputControlsDisabled(true);
-            logger.debug("Cleared session info");
+
+            logger.debug("UI display cleared");
         }
     }
 

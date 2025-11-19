@@ -94,13 +94,15 @@ public class SidebarSessionEntry extends HBox {
         EditSessionDialog dialog = new EditSessionDialog(session);
 
         if (dialog.showAndWait()) {
-            // Notify about the change after the session has been updated
-            if (onSessionChanged != null) {
-                onSessionChanged.run();
-            }
+            System.out.println("[SidebarSessionEntry] Edit confirmed, triggering refresh");
 
-            // Update the UI with the new name
-            nameLabel.setText(session.getName());
+            // Notify about the change - this will reload sessions from database
+            if (onSessionChanged != null) {
+                System.out.println("[SidebarSessionEntry] Calling onSessionChanged callback");
+                onSessionChanged.run();
+            } else {
+                System.out.println("[SidebarSessionEntry] WARNING: onSessionChanged is null!");
+            }
         }
     }
 
@@ -138,7 +140,16 @@ public class SidebarSessionEntry extends HBox {
 
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                DatabaseService.getInstance().deleteSession(session.getId());
+                DatabaseService databaseService = DatabaseService.getInstance();
+                if (databaseService == null) {
+                    AlertHelper.showError(
+                            "Database Error",
+                            "Cannot Delete Session",
+                            "The database is unavailable.");
+                    return;
+                }
+
+                databaseService.deleteSession(session.getId());
                 if (onSessionChanged != null) {
                     onSessionChanged.run();
                 }

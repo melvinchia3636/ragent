@@ -14,6 +14,7 @@ public class EditSessionDialog {
     private final Alert dialog;
     private final TextField nameField;
     private final ComboBox<String> modelComboBox;
+    private final CheckBox queryTransformationCheckBox;
     private final Session session;
 
     /**
@@ -38,6 +39,11 @@ public class EditSessionDialog {
         modelComboBox.setValue(session.getModel());
         modelComboBox.setPrefWidth(300);
 
+        queryTransformationCheckBox = new CheckBox("Enable Query Transformation");
+        queryTransformationCheckBox.setSelected(session.isUseQueryTransformation());
+        queryTransformationCheckBox.setTooltip(
+                new Tooltip("When enabled, generates multiple query variations for better retrieval coverage"));
+
         // Create layout
         VBox content = new VBox(10);
         content.setPadding(new Insets(10));
@@ -45,7 +51,8 @@ public class EditSessionDialog {
                 sessionNameLabel,
                 nameField,
                 modelLabel,
-                modelComboBox);
+                modelComboBox,
+                queryTransformationCheckBox);
 
         dialog.getDialogPane().setContent(content);
 
@@ -78,14 +85,19 @@ public class EditSessionDialog {
     private boolean updateSession() {
         String newName = nameField.getText().trim();
         String newModel = modelComboBox.getValue();
+        boolean useQueryTransformation = queryTransformationCheckBox.isSelected();
+
+        System.out.println("[EditSessionDialog] Updating session:");
+        System.out.println("  - Name: " + newName);
+        System.out.println("  - Model: " + newModel);
+        System.out.println("  - useQueryTransformation: " + useQueryTransformation);
 
         if (!newName.isEmpty()) {
-            // Update database first
-            DatabaseService.getInstance().updateSession(session.getId(), newName, newModel);
+            // Update database - the in-memory session will be refreshed by
+            // handleSessionChanged()
+            DatabaseService.getInstance().updateSession(session.getId(), newName, newModel, useQueryTransformation);
 
-            // Update the in-memory session object
-            session.setName(newName);
-            session.setModel(newModel);
+            System.out.println("[EditSessionDialog] Database updated, session will be refreshed by callback");
 
             return true;
         }

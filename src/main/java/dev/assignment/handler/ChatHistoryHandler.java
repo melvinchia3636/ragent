@@ -1,6 +1,7 @@
 package dev.assignment.handler;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,6 +14,7 @@ import dev.assignment.view.AlertHelper;
 import dev.assignment.view.ChatAreaMessage;
 import dev.assignment.view.ChatMessageEntry;
 import javafx.application.Platform;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
@@ -42,17 +44,32 @@ public class ChatHistoryHandler {
     public void loadChatHistory() {
         Session currentSession = sessionStateHandler.getCurrentSession();
         if (currentSession == null) {
+            logger.warn("Cannot load chat history: No session selected");
             return;
         }
 
-        logger.info("Loading chat history for session: {}", currentSession.getName());
+        logger.info("========== Loading Chat History ==========");
+        logger.info("Session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
 
         ChatAreaMessage loadingMessage = new ChatAreaMessage("Loading chat history...");
         chatContainer.getChildren().add(loadingMessage);
         statusLabel.setText("Loading chat history...");
         sessionStateHandler.setInputControlsDisabled(true);
         new Thread(() -> {
-            List<ChatMessage> history = DatabaseService.getInstance().getChatHistory(currentSession.getId());
+            DatabaseService databaseService = DatabaseService.getInstance();
+            if (databaseService == null) {
+                Platform.runLater(() -> {
+                    chatContainer.getChildren().remove(loadingMessage);
+                    ChatAreaMessage errorMessage = new ChatAreaMessage(
+                            "Database unavailable\n\nCannot load chat history.");
+                    chatContainer.getChildren().add(errorMessage);
+                    sessionStateHandler.setInputControlsDisabled(false);
+                    statusLabel.setText("Ready");
+                });
+                return;
+            }
+
+            List<ChatMessage> history = databaseService.getChatHistory(currentSession.getId());
 
             Platform.runLater(() -> {
                 chatContainer.getChildren().remove(loadingMessage);
@@ -62,13 +79,14 @@ public class ChatHistoryHandler {
                             "Start a conversation!\n\n" +
                                     "Send a message to chat with your knowledgebase.");
                     chatContainer.getChildren().add(emptyMessage);
-                    logger.info("No chat history found - showing empty state message");
+                    logger.info("No chat history found for session: {}", currentSession.getName());
                 } else {
                     for (ChatMessage message : history) {
                         ChatMessageEntry messageBox = new ChatMessageEntry(message);
                         chatContainer.getChildren().add(messageBox);
                     }
-                    logger.info("Loaded {} messages from chat history", history.size());
+                    logger.info("Successfully loaded {} messages for session: {}",
+                            history.size(), currentSession.getName());
                 }
 
                 statusLabel.setText("Ready");
@@ -82,21 +100,26 @@ public class ChatHistoryHandler {
      */
     public void handleClearSession() {
         Session currentSession = sessionStateHandler.getCurrentSession();
-        logger.info("Clearing session");
 
-        if (currentSession == null) {
-            logger.warn("No session selected for clearing session");
-            return;
-        }
+        logger.info("========== Clear Session Request ==========");
+        logger.info("Session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
 
-        boolean confirmClear = AlertHelper.showConfirm(
+        boolean confirmed = AlertHelper.showConfirm(
                 "Clear Session",
-                "Clear all messages in this session?",
-                "This action cannot be undone.");
+                "Are you sure you want to clear this session?",
+                "This will delete all chat history for this session. This action cannot be undone.");
 
-        if (confirmClear) {
-            DatabaseService.getInstance().clearChatHistory(currentSession.getId());
+        if (confirmed) {
+            DatabaseService databaseService = DatabaseService.getInstance();
+            if (databaseService == null) {
+                AlertHelper.showError(
+                        "Database Error",
+                        "Cannot Clear Session",
+                        "The database is unavailable.");
+                return;
+            }
 
+            databaseService.clearChatHistory(currentSession.getId());
             RAGService ragService = sessionStateHandler.getRagService();
             if (ragService != null) {
                 ragService.clearHistory();
@@ -109,8 +132,11 @@ public class ChatHistoryHandler {
                             "Send a message to chat with your knowledgebase.");
             chatContainer.getChildren().add(emptyMessage);
 
-            logger.info("Session cleared for session: {}", currentSession.getName());
+            logger.info("Session successfully cleared: id={}, name='{}'",
+                    currentSession.getId(), currentSession.getName());
             statusLabel.setText("Session cleared");
+        } else {
+            logger.info("Session clear cancelled by user");
         }
     }
 
