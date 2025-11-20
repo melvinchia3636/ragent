@@ -30,21 +30,19 @@ public class SessionSidebar extends VBox {
 
     public SessionSidebar() {
         setAlignment(Pos.CENTER);
-        setPadding(new Insets(20, 0, 20, 20));
         setSpacing(0);
 
         // Create scroll pane with session list
         scrollPane = new ScrollPane();
+        scrollPane.setId("sessionList");
         scrollPane.setFitToWidth(true);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setPrefHeight(-1.0);
         scrollPane.setPrefWidth(-1.0);
-        scrollPane.setStyle("-fx-background-color: transparent;");
         VBox.setVgrow(scrollPane, javafx.scene.layout.Priority.ALWAYS);
 
         // Create session list container
         sessionListContainer = new VBox();
-        sessionListContainer.setSpacing(6.0);
         scrollPane.setContent(sessionListContainer);
 
         // Add margin to scroll pane
@@ -52,22 +50,11 @@ public class SessionSidebar extends VBox {
 
         // Create "New Session" button
         newSessionButton = new Button("New Session");
+        newSessionButton.setId("newSessionButton");
         newSessionButton.setMaxWidth(Double.MAX_VALUE);
         newSessionButton.setMnemonicParsing(false);
         newSessionButton.setOnAction(e -> handleNewSession());
-        VBox.setMargin(newSessionButton, new Insets(0, 20, 0, 0));
-
-        // Add icon to button
-        try {
-            ImageView icon = new ImageView(new Image(
-                    getClass().getResourceAsStream("/dev/assignment/uil--comment-plus.png")));
-            icon.setFitHeight(150.0);
-            icon.setFitWidth(18.0);
-            icon.setPreserveRatio(true);
-            newSessionButton.setGraphic(icon);
-        } catch (Exception e) {
-            // Icon not found, continue without it
-        }
+        VBox.setMargin(newSessionButton, new Insets(10, 10, 10, 10));
 
         getChildren().addAll(scrollPane, newSessionButton);
     }

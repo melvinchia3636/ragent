@@ -3,11 +3,13 @@ package dev.assignment.handler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import dev.assignment.App;
 import dev.assignment.model.Session;
 import dev.assignment.service.APIKeyService;
 import dev.assignment.service.DatabaseService;
 import dev.assignment.service.RAGService;
 import dev.assignment.service.ResourceService;
+import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -211,6 +213,13 @@ public class SessionStateHandler {
             clearSessionButton.setVisible(true);
             clearSessionButton.setManaged(true);
 
+            // Update window title
+            Platform.runLater(() -> {
+                if (App.getPrimaryStage() != null) {
+                    App.getPrimaryStage().setTitle(session.getName() + " - RAGent");
+                }
+            });
+
             logger.debug("UI display updated successfully");
         } else {
             logger.debug("Clearing UI display (no session)");
@@ -223,6 +232,13 @@ public class SessionStateHandler {
             clearSessionButton.setVisible(false);
             clearSessionButton.setManaged(false);
             setInputControlsDisabled(true);
+
+            // Reset window title
+            Platform.runLater(() -> {
+                if (App.getPrimaryStage() != null) {
+                    App.getPrimaryStage().setTitle("RAGent");
+                }
+            });
 
             logger.debug("UI display cleared");
         }

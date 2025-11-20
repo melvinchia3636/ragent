@@ -1,7 +1,6 @@
 package dev.assignment.view;
 
 import dev.assignment.model.ChatMessage;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -14,7 +13,7 @@ import javafx.scene.layout.VBox;
 public final class ChatMessageEntry extends VBox {
 
     private final Label messageLabel;
-    private Label sourcesLabel;
+    private Label topLabel;
     private final HBox messageContainer;
     private final boolean isUserMessage;
 
@@ -25,24 +24,15 @@ public final class ChatMessageEntry extends VBox {
         // Create container for message alignment
         this.messageContainer = new HBox();
 
-        // Set alignment based on message type
+        // Set alignment and style class based on message type
         if (message.isUser()) {
             messageContainer.setAlignment(Pos.CENTER_RIGHT);
-            messageLabel.setStyle(
-                    "-fx-background-color: white; " +
-                            "-fx-background-radius: 4; " +
-                            "-fx-border-color: lightgrey; " +
-                            "-fx-border-radius: 4;");
+            messageLabel.getStyleClass().addAll("chat-message", "user-message");
         } else {
             messageContainer.setAlignment(Pos.CENTER_LEFT);
-            messageLabel.setStyle(
-                    "-fx-background-color: lightgrey; " +
-                            "-fx-background-radius: 4; " +
-                            "-fx-border-color: grey; " +
-                            "-fx-border-radius: 4;");
+            messageLabel.getStyleClass().addAll("chat-message", "ai-message");
         }
 
-        messageLabel.setPadding(new Insets(10, 10, 10, 10));
         messageLabel.setMaxWidth(500);
         messageLabel.setWrapText(true);
         messageLabel.setMinHeight(Region.USE_PREF_SIZE);
@@ -54,7 +44,7 @@ public final class ChatMessageEntry extends VBox {
 
         // Add sources label if available (for AI messages)
         if (!message.isUser() && message.hasSources()) {
-            setSources(message.getSources());
+            setTopLabel("Referenced from: " + message.getSources());
         }
 
         setSpacing(0);
@@ -75,24 +65,19 @@ public final class ChatMessageEntry extends VBox {
     }
 
     /**
-     * Set the sources for the message
+     * Set the top label (for sources or progress updates)
      */
-    public void setSources(String sources) {
-        if (sourcesLabel != null) {
-            sourcesLabel.setText(sources);
+    public void setTopLabel(String text) {
+        if (topLabel != null) {
+            topLabel.setText(text);
         } else if (!isUserMessage) {
-            // Create the sources label if it doesn't exist yet (for streaming responses)
-            sourcesLabel = new Label(sources);
-            sourcesLabel.setStyle("-fx-text-fill: #909090; -fx-font-size: 11px;");
-            sourcesLabel.setMaxWidth(Double.MAX_VALUE);
-            sourcesLabel.setAlignment(Pos.CENTER_LEFT);
-            sourcesLabel.setPadding(new Insets(2, 0, 5, 0));
-            sourcesLabel.setWrapText(true);
-            sourcesLabel.setMaxWidth(500);
-            sourcesLabel.setMinHeight(Region.USE_PREF_SIZE);
+            // Create the label if it doesn't exist yet (for streaming responses)
+            topLabel = new Label(text);
+            topLabel.getStyleClass().add("chat-sources");
+            topLabel.setAlignment(Pos.CENTER_LEFT);
 
-            // Add the sources label before the message container
-            getChildren().add(0, sourcesLabel);
+            // Add the label before the message container
+            getChildren().add(0, topLabel);
         }
     }
 }

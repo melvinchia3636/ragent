@@ -19,7 +19,7 @@ import javafx.scene.layout.VBox;
 /**
  * Custom component for displaying a session in the sidebar
  */
-public class SidebarSessionEntry extends HBox {
+public final class SidebarSessionEntry extends HBox {
 
     private final Session session;
     private final Label nameLabel;
@@ -34,7 +34,7 @@ public class SidebarSessionEntry extends HBox {
         this.onSessionChanged = onSessionChanged;
 
         setAlignment(Pos.CENTER);
-        setStyle("-fx-cursor: hand; -fx-padding: 4 10 0 0;");
+        getStyleClass().add("sidebarSessionEntry");
 
         nameLabel = new Label(session.getName());
         MenuButton menuButton = createMenuButton();
@@ -58,15 +58,6 @@ public class SidebarSessionEntry extends HBox {
         menuButton.setGraphicTextGap(0.0);
         menuButton.setMnemonicParsing(false);
         menuButton.setStyle("-fx-background-color: transparent;");
-
-        try {
-            menuButton.getStylesheets().add(
-                    getClass().getResource("/dev/assignment/main.css").toExternalForm());
-        } catch (Exception e) {
-            // CSS not found, continue without it
-        }
-
-        menuButton.setPadding(new Insets(0, -4, 0, -4));
 
         try {
             ImageView icon = new ImageView(new Image(
@@ -159,9 +150,9 @@ public class SidebarSessionEntry extends HBox {
 
     public void updateStyling(boolean isSelected) {
         if (isSelected) {
-            nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+            getStyleClass().add("selected");
         } else {
-            nameLabel.setStyle("-fx-font-size: 13px;");
+            getStyleClass().remove("selected");
         }
     }
 

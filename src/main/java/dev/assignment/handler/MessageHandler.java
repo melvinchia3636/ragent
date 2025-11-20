@@ -115,7 +115,7 @@ public class MessageHandler {
                     public void onProgress(String progressMessage) {
                         Platform.runLater(() -> {
                             // Show progress in the reference label while processing
-                            aiMessageBox.setSources(progressMessage);
+                            aiMessageBox.setTopLabel(progressMessage);
                         });
                     }
 
@@ -142,7 +142,7 @@ public class MessageHandler {
                             String sourcesText = null;
                             if (!sources.isEmpty()) {
                                 sourcesText = String.join(", ", sources);
-                                aiMessageBox.setSources(sourcesText);
+                                aiMessageBox.setTopLabel("Referenced from: " + sourcesText);
                             }
 
                             // Create final AI message with sources and save to database

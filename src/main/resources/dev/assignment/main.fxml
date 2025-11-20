@@ -1,37 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!--
-  Copyright (c) 2015, 2019, Gluon and/or its affiliates.
-  All rights reserved. Use is subject to license terms.
-
-  This file is available and licensed under the following license:
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-
-  - Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-  - Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in
-    the documentation and/or other materials provided with the distribution.
-  - Neither the name of Oracle Corporation nor the names of its
-    contributors may be used to endorse or promote products derived
-    from this software without specific prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--->
-
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -47,118 +15,58 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
-<?import javafx.scene.text.Font?>
 
-<VBox prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/25"
-   xmlns:fx="http://javafx.com/fxml/1" fx:controller="dev.assignment.MainController">
-   <children>
-      <SplitPane dividerPositions="0.25111358574610243" focusTraversable="true" prefHeight="-1.0"
-         prefWidth="-1.0" VBox.vgrow="ALWAYS">
-         <items>
-            <dev.assignment.view.SessionSidebar fx:id="sessionSidebar"
-               SplitPane.resizableWithParent="false" />
-            <VBox>
-               <children>
-                  <HBox alignment="CENTER">
-                     <children>
-                        <VBox>
-                           <children>
-                              <Label fx:id="sessionNameLabel" text="No Session Selected">
-                                 <font>
-                                    <Font name="System Italic" size="18.0" />
-                                 </font>
-                              </Label>
-                              <Label fx:id="sessionCreatedLabel" text="" textFill="#909090" />
-                           </children>
-                        </VBox>
-                        <Pane HBox.hgrow="ALWAYS" />
-                        <Button fx:id="clearSessionButton" mnemonicParsing="false"
-                           onAction="#handleClearSession"
-                           text="Clear Session" visible="false" managed="false">
-                           <graphic>
-                              <ImageView fitHeight="150.0" fitWidth="18.0" pickOnBounds="true"
-                                 preserveRatio="true">
-                                 <image>
-                                    <Image url="@tabler--trash.png" />
-                                 </image>
-                              </ImageView>
-                           </graphic>
-                           <HBox.margin>
-                              <Insets right="10.0" />
-                           </HBox.margin>
-                        </Button>
-                        <Button fx:id="manageKnowledgebaseButton" mnemonicParsing="false"
-                           onAction="#handleManageKnowledgebase"
-                           text="Manage Knowledgebase" visible="false" managed="false">
-                           <graphic>
-                              <ImageView fitHeight="150.0" fitWidth="18.0" pickOnBounds="true"
-                                 preserveRatio="true">
-                                 <image>
-                                    <Image url="@uil--books.png" />
-                                 </image>
-                              </ImageView>
-                           </graphic>
-                        </Button>
-                     </children>
-                     <VBox.margin>
-                        <Insets bottom="20.0" />
-                     </VBox.margin>
-                  </HBox>
-                  <ScrollPane fx:id="chatScrollPane" fitToHeight="true" fitToWidth="true"
-                     hbarPolicy="NEVER"
-                     pannable="true" prefHeight="200.0" prefWidth="200.0"
-                     style="-fx-background-color: transparent;" VBox.vgrow="ALWAYS">
-                     <VBox.margin>
-                        <Insets />
-                     </VBox.margin>
-                     <content>
-                        <VBox fx:id="chatContainer" alignment="TOP_CENTER"
-                           maxHeight="1.7976931348623157E308"
-                           maxWidth="1.7976931348623157E308" spacing="6.0">
-                        </VBox>
-                     </content>
-                  </ScrollPane>
-                  <HBox alignment="CENTER">
-                     <children>
-                        <TextArea fx:id="messageInput"
-                           promptText="Enter your prompt here... (Ctrl/Cmd+Enter to send)"
-                           HBox.hgrow="ALWAYS" prefRowCount="1" wrapText="true">
-                           <HBox.margin>
-                              <Insets right="10.0" />
-                           </HBox.margin>
-                        </TextArea>
-                        <Button fx:id="sendButton" mnemonicParsing="false" text="Send"
-                           style="-fx-padding: 10 20 10 20;" onAction="#handleSendMessage" />
-                     </children>
-                     <VBox.margin>
-                        <Insets top="10.0" />
-                     </VBox.margin>
-                  </HBox>
-               </children>
-               <padding>
-                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-               </padding>
-            </VBox>
-         </items>
-      </SplitPane>
-      <HBox id="HBox" alignment="CENTER_LEFT" spacing="5.0">
-         <children>
-            <Label fx:id="statusLabel" maxHeight="1.7976931348623157E308" maxWidth="-1.0"
-               text="Ready" HBox.hgrow="ALWAYS">
-               <font>
-                  <Font size="11.0" fx:id="x3" />
-               </font>
-               <textFill>
-                  <Color red="0.625" green="0.625" blue="0.625" fx:id="x4" />
-               </textFill>
-            </Label>
-            <Pane prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
-            <Label fx:id="modelLabel" font="$x3" maxWidth="-1.0" text="Model: GPT-4o-mini"
-               textFill="$x4" HBox.hgrow="NEVER" />
-         </children>
-         <padding>
-            <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
-         </padding>
-      </HBox>
-   </children>
+<VBox prefHeight="600.0" prefWidth="900.0" fx:id="mainWrapper" xmlns="http://javafx.com/javafx/25"
+   xmlns:fx="http://javafx.com/fxml/1" fx:controller="dev.assignment.MainController" spacing="16.0">
+   <SplitPane fx:id="mainContainer" dividerPositions="0.25" focusTraversable="true"
+      prefHeight="-1.0"
+      prefWidth="-1.0" VBox.vgrow="ALWAYS">
+      <items>
+         <dev.assignment.view.SessionSidebar fx:id="sessionSidebar"
+            SplitPane.resizableWithParent="false" />
+         <VBox fx:id="chatContainerWrapper" prefHeight="-1.0" prefWidth="-1.0">
+            <HBox id="sessionHeader" alignment="CENTER" fx:id="sessionHeader" spacing="10.0">
+               <VBox HBox.hgrow="ALWAYS" fx:id="sessionInfoContainer">
+                  <Label fx:id="sessionNameLabel" text="No Session Selected"
+                     styleClass="session-title" />
+                  <Label fx:id="sessionCreatedLabel" text="" styleClass="session-date" />
+               </VBox>
+               <Button id="clearSessionButton" fx:id="clearSessionButton"
+                  mnemonicParsing="false"
+                  onAction="#handleClearSession"
+                  text="Clear Session" visible="false" managed="false" HBox.hgrow="NEVER" />
+               <Button
+                  id="manageKnowledgebaseButton" fx:id="manageKnowledgebaseButton"
+                  mnemonicParsing="false"
+                  onAction="#handleManageKnowledgebase"
+                  text="Manage Knowledgebase" visible="false" managed="false" HBox.hgrow="NEVER" />
+            </HBox>
+            <ScrollPane id="chatScrollPane" fx:id="chatScrollPane" fitToHeight="true"
+               fitToWidth="true"
+               hbarPolicy="NEVER"
+               pannable="true" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+               <VBox id="chatContainer" fx:id="chatContainer" alignment="TOP_CENTER"
+                  maxHeight="1.7976931348623157E308"
+                  maxWidth="1.7976931348623157E308" spacing="6.0">
+               </VBox>
+            </ScrollPane>
+            <HBox id="inputContainer" alignment="CENTER">
+               <TextArea id="messageInput" fx:id="messageInput"
+                  promptText="Enter your prompt here... (Ctrl/Cmd+Enter to send)"
+                  HBox.hgrow="ALWAYS" prefRowCount="1" wrapText="true">
+               </TextArea>
+               <Button id="sendButton" fx:id="sendButton" mnemonicParsing="false"
+                  text="Send"
+                  onAction="#handleSendMessage" />
+            </HBox>
+         </VBox>
+      </items>
+   </SplitPane>
+   <HBox id="statusBar" alignment="CENTER_LEFT" spacing="5.0" fx:id="statusBar">
+      <Label id="statusLabel" fx:id="statusLabel" maxWidth="-1.0"
+         text="Ready" HBox.hgrow="ALWAYS" />
+      <Pane prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
+      <Label id="modelLabel" fx:id="modelLabel" maxWidth="-1.0" text="Model: GPT-4o-mini"
+         HBox.hgrow="NEVER" />
+   </HBox>
 </VBox>
