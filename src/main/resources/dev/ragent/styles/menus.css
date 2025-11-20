@@ -1,0 +1,47 @@
+.context-menu {
+  -fx-background-color: -color-bg-secondary;
+  -fx-background-radius: 4;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-padding: 4;
+}
+
+.context-menu .separator {
+  -fx-padding: 0;
+}
+
+.menu-item {
+  -fx-background-color: -color-bg-secondary;
+  -fx-padding: 8 12;
+  -fx-background-radius: 3;
+  transition: -fx-background-color 0.1s ease;
+}
+
+.menu-item .icon * {
+  -fx-stroke: -color-text-primary;
+}
+
+.menu-item.dangerous * {
+  -fx-text-fill: -color-danger !important;
+}
+
+.menu-item.dangerous .icon * {
+  -fx-stroke: -color-danger;
+}
+
+.menu-item:hover {
+  -fx-background-color: -color-hover;
+}
+
+.menu-item:focused {
+  -fx-background-color: -color-hover;
+}
+
+.menu-item .label {
+  -fx-text-fill: -color-text-primary;
+  -fx-font-size: 14;
+  -fx-font-smoothing-type: lcd;
+  -fx-background-color: transparent;
+  -fx-text-alignment: left;
+}

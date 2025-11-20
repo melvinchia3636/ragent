@@ -1,0 +1,62 @@
+/* Spacing Guide:
+   xs:  4px   - Minimal spacing
+   sm:  6px   - Small spacing
+   md:  12px  - Medium spacing (default)
+   lg:  20px  - Large spacing
+   xl:  24px  - Extra large spacing
+   xxl: 30px  - Extra extra large spacing
+   
+   Border Radius Guide:
+   sm: 4px  - Small radius
+   md: 8px  - Medium radius
+   
+   Font Size Guide:
+   xs: 11px - Extra small text
+   sm: 14px - Small text
+   md: 16px - Medium text
+*/
+
+:root {
+  -color-bg-primary: #fafafc;
+  -color-bg-secondary: white;
+  -color-bg-dark: #282a2c;
+  -color-bg-dark-hover: #222222ff;
+  -color-border: #eaeaea;
+  -color-border-light: lightgrey;
+  -color-text-primary: #282a2c;
+  -color-text-secondary: #a0a0a0;
+  -color-text-muted: #909090;
+  -color-text-light: #fafafc;
+  -color-danger: #ff4444;
+  -color-hover: #f5f7f9;
+  -color-selected: #edf1f5;
+  -color-scrollbar: #d0d0d0;
+  -color-scrollbar-hover: #b0b0b0;
+}
+
+:root.dark-theme {
+  -color-bg-primary: #1a1b1e;
+  -color-bg-secondary: #25262b;
+  -color-bg-dark: #fafafc;
+  -color-bg-dark-hover: #d8d8da;
+  -color-border: #373a40;
+  -color-border-light: #2c2e33;
+  -color-text-primary: #fafafc;
+  -color-text-secondary: #909296;
+  -color-text-muted: #787b82ff;
+  -color-text-light: #282a2c;
+  -color-danger: #ff6b6b;
+  -color-hover: #2c2e33;
+  -color-selected: #373a40;
+  -color-scrollbar: #5c5f66;
+  -color-scrollbar-hover: #909296;
+}
+
+.label,
+.text,
+.text-field,
+.text-area,
+.combo-box,
+.button {
+  -fx-text-fill: -color-text-primary;
+}

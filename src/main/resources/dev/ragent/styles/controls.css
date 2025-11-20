@@ -1,0 +1,79 @@
+.check-box {
+  -fx-font-size: 14;
+}
+
+.check-box .box {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: -color-border;
+  -fx-border-width: 2;
+  -fx-border-radius: 3;
+  -fx-background-radius: 3;
+  -fx-padding: 2;
+}
+
+.check-box:hover .box {
+  -fx-border-color: -color-bg-dark;
+}
+
+.check-box:selected .box {
+  -fx-background-color: -color-bg-dark;
+  -fx-border-color: -color-bg-dark;
+}
+
+.check-box .mark {
+  -fx-background-color: -color-bg-secondary;
+  -fx-background-insets: 0;
+  -fx-shape: "M 0 5 L 4 9 L 12 1 L 11 0 L 4 7 L 1 4 Z";
+  -fx-scale-shape: true;
+  -fx-padding: 0.3em;
+}
+
+.check-box:selected .mark {
+  -fx-background-color: -color-text-light;
+}
+
+  -fx-background-color: -color-bg-primary;
+  -fx-background-radius: 4;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+}
+
+.combo-box:focused {
+  -fx-border-color: -color-bg-dark;
+  -fx-border-width: 2;
+}
+
+.combo-box .list-cell {
+  -fx-background-color: -color-bg-primary;
+  -fx-text-fill: -color-text-primary;
+  -fx-padding: 8 12;
+}
+
+.text-field {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-insets: 0;
+  -fx-background-radius: 4;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-padding: 8 12;
+  -fx-font-size: 14;
+}
+
+.text-field:focused {
+  -fx-border-color: -color-bg-dark;
+  -fx-border-width: 2;
+}
+
+.progress-bar {
+  -fx-background-color: -color-border;
+  -fx-background-radius: 4;
+}
+
+.progress-bar .bar {
+  -fx-background-color: -color-bg-dark;
+  -fx-background-radius: 4;
+  -fx-background-insets: 0;
+  -fx-padding: 0;
+}

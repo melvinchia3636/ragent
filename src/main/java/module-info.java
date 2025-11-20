@@ -1,4 +1,4 @@
-module dev.assignment {
+module dev.ragent {
     requires transitive javafx.controls;
     requires transitive javafx.fxml;
     requires transitive javafx.graphics;
@@ -21,19 +21,25 @@ module dev.assignment {
     // SQLite JDBC for database storage
     requires java.sql;
 
+    // Java Preferences API
+    requires java.prefs;
+
     // dotenv-java for loading environment variables
     requires io.github.cdimascio.dotenv.java;
 
+    requires transitive org.girod.javafx.svgimage;
+
     // Open packages to javafx.fxml for reflection-based access
-    opens dev.assignment to javafx.fxml;
-    opens dev.assignment.controller to javafx.fxml;
+    opens dev.ragent to javafx.fxml;
+    opens dev.ragent.controller to javafx.fxml;
+    opens dev.ragent.view to javafx.fxml;
 
     // Export packages for internal module access
-    exports dev.assignment;
-    exports dev.assignment.controller;
-    exports dev.assignment.handler;
-    exports dev.assignment.model;
-    exports dev.assignment.service;
-    exports dev.assignment.view;
-    exports dev.assignment.util;
+    exports dev.ragent;
+    exports dev.ragent.controller;
+    exports dev.ragent.handler;
+    exports dev.ragent.model;
+    exports dev.ragent.service;
+    exports dev.ragent.view;
+    exports dev.ragent.util;
 }

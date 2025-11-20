@@ -1,0 +1,81 @@
+.icon * {
+  -fx-stroke: -color-text-secondary;
+}
+
+/* Primary Button - Dark background */
+.primary-btn {
+  -fx-background-color: -color-bg-dark;
+  -fx-text-fill: -color-text-light;
+  -fx-padding: 12;
+  -fx-font-weight: bold;
+  -fx-background-radius: 4;
+  -fx-cursor: hand;
+  -fx-font-size: 14;
+  transition: -fx-background-color 0.2s ease;
+}
+
+.primary-btn .icon * {
+  -fx-stroke: -color-text-light;
+}
+
+.primary-btn:hover {
+  -fx-background-color: -color-bg-dark-hover;
+}
+
+/* Secondary Button - Outlined dark */
+.secondary-btn {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: -color-bg-dark;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-text-fill: -color-text-primary;
+  -fx-padding: 12;
+  -fx-font-weight: bold;
+  -fx-background-radius: 4;
+  -fx-cursor: hand;
+  -fx-font-size: 14;
+  transition: -fx-background-color 0.2s ease, -fx-text-fill 0.2s ease;
+}
+
+.secondary-btn .icon * {
+  -fx-stroke: -color-text-primary;
+  transition: -fx-stroke 0.2s ease;
+}
+
+.secondary-btn:hover {
+  -fx-background-color: -color-bg-dark;
+  -fx-text-fill: -color-text-light;
+}
+
+.secondary-btn:hover .icon * {
+  -fx-stroke: -color-text-light;
+}
+
+/* Dangerous Secondary Button - Outlined danger */
+.dangerous-secondary-btn {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: -color-danger;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-text-fill: -color-danger;
+  -fx-padding: 12;
+  -fx-font-weight: bold;
+  -fx-background-radius: 4;
+  -fx-cursor: hand;
+  -fx-font-size: 14;
+  transition: -fx-background-color 0.2s ease, -fx-text-fill 0.2s ease;
+}
+
+.dangerous-secondary-btn .icon * {
+  -fx-stroke: -color-danger !important;
+  transition: -fx-stroke 0.2s ease;
+}
+
+.dangerous-secondary-btn:hover {
+  -fx-background-color: -color-danger;
+  -fx-text-fill: -color-text-light;
+}
+
+.dangerous-secondary-btn:hover .icon * {
+  -fx-stroke: -color-text-light !important;
+}

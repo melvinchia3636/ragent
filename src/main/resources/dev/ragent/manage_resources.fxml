@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox styleClass="manage-resources-dialog"
+    xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="dev.ragent.controller.ResourceManagementController">
+
+    <Label text="Manage Knowledgebase" styleClass="manage-resources-title" />
+
+    <Label text="Add, remove, or view resources in your knowledgebase"
+        styleClass="manage-resources-subtitle" />
+
+    <Label text="Tip: Double-click a resource to view its content"
+        styleClass="manage-resources-hint" />
+
+    <Label text="Tip: Hold Shift, Ctrl, or Cmd to select multiple resources"
+        styleClass="manage-resources-hint" />
+
+    <Label text="Tip: PDF, Word, and PowerPoint files will be automatically converted to text"
+        styleClass="manage-resources-hint" />
+
+    <ScrollPane fx:id="resourceScrollPane" styleClass="resource-scroll-pane">
+        <VBox fx:id="resourceContainer" styleClass="resource-container" />
+    </ScrollPane>
+
+    <Button fx:id="addResourceButton" onAction="#handleAddResource"
+        text="Add Resource" styleClass="primary-btn" />
+
+    <Button fx:id="removeResourceButton" onAction="#handleRemoveResource"
+        text="Remove Selected" styleClass="dangerous-secondary-btn"
+        visible="false" managed="false" />
+
+    <Button fx:id="closeButton" onAction="#handleClose"
+        text="Close" styleClass="secondary-btn" />
+</VBox>

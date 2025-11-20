@@ -1,0 +1,115 @@
+#chatContainerWrapper {
+  -fx-padding: 20;
+  -fx-background-color: -color-bg-secondary;
+  -fx-background-radius: 8;
+  -fx-border-radius: 8;
+  -fx-border-width: 1;
+  -fx-border-color: -color-border;
+}
+
+#sessionHeader {
+  -fx-padding: 0 0 30 0;
+}
+
+#chatScrollPane {
+  -fx-padding: 0 0 20 0;
+}
+
+#chatContainer {
+  -fx-spacing: 6;
+  -fx-padding: 0 10;
+}
+
+#inputContainer {
+  -fx-padding: 8;
+  -fx-background-color: -color-bg-primary;
+  -fx-border-radius: 8;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+}
+
+#messageInput {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-insets: 0;
+  -fx-background-radius: 4;
+  -fx-focus-color: transparent;
+  -fx-faint-focus-color: transparent;
+  -fx-pref-height: 40;
+  -fx-min-height: 40;
+}
+
+#messageInput .content {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-insets: 0;
+  -fx-padding: 12;
+  -fx-border-width: 0;
+}
+
+#messageInput .scroll-bar:vertical,
+#messageInput .scroll-bar:horizontal {
+  -fx-opacity: 0;
+  -fx-pref-width: 0;
+  -fx-pref-height: 0;
+}
+
+.chat-message {
+  -fx-font-family: "Space Grotesk Normal";
+  -fx-padding: 12 16;
+  -fx-max-width: 500;
+  -fx-wrap-text: true;
+  -fx-background-radius: 4;
+  -fx-border-radius: 4;
+}
+
+.chat-message.user-message {
+  -fx-background-color: -color-bg-primary;
+  -fx-border-color: -color-border-light;
+}
+
+.chat-message.ai-message {
+  -fx-background-color: -color-bg-dark;
+  -fx-text-fill: -color-text-light;
+}
+
+:root.dark-theme .chat-message.user-message {
+  -fx-background-color: #35373dff;
+  -fx-border-color: -color-border;
+}
+
+:root.dark-theme .chat-message.ai-message {
+  -fx-background-color: #141517;
+  -fx-text-fill: -color-text-primary;
+  -fx-border-color: transparent;
+  -fx-border-width: 0;
+}
+
+.chat-sources {
+  -fx-text-fill: -color-text-muted;
+  -fx-font-size: 11;
+  -fx-max-width: 500;
+  -fx-padding: 2 0 5 0;
+}
+
+#statusBar {
+  -fx-padding: 12;
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-width: 1;
+  -fx-border-color: -color-border;
+  -fx-background-radius: 8;
+  -fx-border-radius: 8;
+}
+
+#statusLabel,
+#modelLabel {
+  -fx-font-size: 12;
+  -fx-text-fill: -color-text-secondary;
+}
+
+#sendButton {
+  -fx-pref-width: 40;
+  -fx-pref-height: 40;
+  -fx-max-width: 40;
+  -fx-max-height: 40;
+  -fx-min-width: 40;
+  -fx-min-height: 40;
+}

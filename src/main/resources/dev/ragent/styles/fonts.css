@@ -1,0 +1,13 @@
+@font-face {
+  font-family: "Space Grotesk Normal";
+  src: url("../fonts/SpaceGrotesk-Regular.ttf");
+}
+
+@font-face {
+  font-family: "Space Grotesk Bold";
+  src: url("../fonts/SpaceGrotesk-Bold.ttf");
+}
+
+* {
+  -fx-font-family: "Space Grotesk";
+}

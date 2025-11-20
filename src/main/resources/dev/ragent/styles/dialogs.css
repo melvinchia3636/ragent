@@ -1,0 +1,71 @@
+.dialog-content {
+  -fx-background-color: -color-bg-secondary;
+  -fx-spacing: 16;
+  -fx-padding: 20;
+}
+
+.dialog-content VBox {
+  -fx-spacing: 8;
+}
+
+.dialog-content HBox {
+  -fx-spacing: 12;
+}
+
+.dialog-section-title {
+  -fx-font-size: 14;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-primary;
+  -fx-padding: 8 0 8 0;
+}
+
+.dialog-label {
+  -fx-font-size: 14;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-primary;
+}
+
+.dialog-hint {
+  -fx-font-size: 12;
+  -fx-text-fill: -color-text-secondary;
+}
+
+.dialog-detail {
+  -fx-font-size: 12;
+  -fx-text-fill: -color-text-secondary;
+  -fx-wrap-text: true;
+  -fx-pref-width: 400;
+}
+
+.dialog-checkbox {
+  -fx-font-size: 14;
+  -fx-text-fill: -color-text-primary;
+}
+
+.dialog-content .button-container {
+  -fx-alignment: center-right;
+  -fx-spacing: 12;
+  -fx-padding: 10 0 0 0;
+}
+
+.dialog-content .dialog-option-row {
+  -fx-spacing: 24;
+}
+
+.dialog-content .secondary-btn,
+.dialog-content .primary-btn {
+  -fx-min-width: 100;
+}
+
+.dialog-content .text-field {
+  -fx-pref-width: 400;
+}
+
+.dialog-content .combo-box {
+  -fx-pref-width: 400;
+}
+
+.dialog-content .progress-bar {
+  -fx-pref-width: 400;
+  -fx-pref-height: 8;
+}

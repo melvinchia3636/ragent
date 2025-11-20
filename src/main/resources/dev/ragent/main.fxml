@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+
+<VBox prefHeight="600.0" prefWidth="900.0" fx:id="mainWrapper" xmlns="http://javafx.com/javafx/25"
+   xmlns:fx="http://javafx.com/fxml/1" fx:controller="dev.ragent.controller.MainController"
+   spacing="16.0">
+   <SplitPane fx:id="mainContainer" dividerPositions="0.25" focusTraversable="true"
+      prefHeight="-1.0"
+      prefWidth="-1.0" VBox.vgrow="ALWAYS">
+      <dev.ragent.view.SessionSidebar fx:id="sessionSidebar"
+         SplitPane.resizableWithParent="false" />
+      <VBox fx:id="chatContainerWrapper" prefHeight="-1.0" prefWidth="-1.0">
+         <HBox id="sessionHeader" alignment="CENTER" fx:id="sessionHeader" spacing="10.0">
+            <VBox HBox.hgrow="ALWAYS" fx:id="sessionInfoContainer">
+               <Label fx:id="sessionNameLabel" text="No Session Selected"
+                  styleClass="session-title" />
+               <Label fx:id="sessionCreatedLabel" text="" styleClass="session-date" />
+            </VBox>
+            <Button fx:id="clearSessionButton" styleClass="dangerous-secondary-btn"
+               mnemonicParsing="false"
+               onAction="#handleClearSession"
+               text="Clear Session" visible="false" managed="false" HBox.hgrow="NEVER" />
+            <Button fx:id="manageKnowledgebaseButton" styleClass="secondary-btn"
+               mnemonicParsing="false"
+               onAction="#handleManageKnowledgebase"
+               text="Manage Knowledgebase" visible="false" managed="false" HBox.hgrow="NEVER" />
+         </HBox>
+         <ScrollPane id="chatScrollPane" fx:id="chatScrollPane" fitToHeight="true"
+            fitToWidth="true"
+            hbarPolicy="NEVER"
+            pannable="true" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+            <VBox id="chatContainer" fx:id="chatContainer" alignment="TOP_CENTER" spacing="6.0" />
+         </ScrollPane>
+         <HBox id="inputContainer" alignment="CENTER">
+            <TextArea id="messageInput" fx:id="messageInput"
+               promptText="Enter your prompt here... (Ctrl/Cmd+Enter to send)"
+               HBox.hgrow="ALWAYS" prefRowCount="1" wrapText="true">
+            </TextArea>
+            <Button fx:id="sendButton" styleClass="primary-btn"
+               mnemonicParsing="false" text="Send"
+               onAction="#handleSendMessage" />
+         </HBox>
+      </VBox>
+   </SplitPane>
+   <HBox id="statusBar" alignment="CENTER_LEFT" spacing="5.0" fx:id="statusBar">
+      <Label id="statusLabel" fx:id="statusLabel" maxWidth="-1.0"
+         text="Ready" HBox.hgrow="ALWAYS" />
+      <Pane prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
+      <Label id="modelLabel" fx:id="modelLabel" maxWidth="-1.0" text="N/A"
+         HBox.hgrow="NEVER" />
+   </HBox>
+</VBox>

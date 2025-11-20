@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1"
+    styleClass="dialog-content">
+
+    <VBox>
+        <Label text="Session Name:" styleClass="dialog-label" />
+        <TextField fx:id="nameField" promptText="Enter session name" />
+    </VBox>
+
+    <VBox>
+        <Label text="Model:" styleClass="dialog-label" />
+        <ComboBox fx:id="modelComboBox" />
+    </VBox>
+
+    <VBox>
+        <CheckBox fx:id="queryTransformationCheckBox" text="Enable Query Transformation"
+            styleClass="dialog-checkbox">
+            <tooltip>
+                <Tooltip
+                    text="When enabled, generates multiple query variations for better retrieval coverage" />
+            </tooltip>
+        </CheckBox>
+    </VBox>
+
+    <HBox styleClass="button-container">
+        <Button fx:id="cancelButton" text="Cancel" styleClass="secondary-btn"
+            onAction="#handleCancel" />
+        <Button fx:id="okButton" styleClass="primary-btn"
+            onAction="#handleOk" />
+    </HBox>
+</VBox>

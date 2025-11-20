@@ -1,0 +1,23 @@
+#mainWrapper {
+  -fx-background-color: -color-bg-primary;
+  -fx-padding: 24;
+}
+
+#mainContainer {
+  -fx-background-color: -color-bg-primary;
+  -fx-border-width: 0;
+}
+
+#mainContainer .split-pane-divider {
+  -fx-background-color: transparent;
+  -fx-padding: 0 8;
+}
+
+.menu-button > .arrow-button {
+  -fx-padding: 0;
+  -fx-background-color: transparent;
+}
+
+.menu-button > .arrow-button > .arrow {
+  -fx-padding: 0;
+}
