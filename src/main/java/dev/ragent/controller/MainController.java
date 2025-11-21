@@ -17,7 +17,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 public class MainController {
-
     @FXML
     private VBox mainWrapper;
 
@@ -99,7 +98,6 @@ public class MainController {
                 clearSessionButton,
                 sessionSidebar);
 
-        // Set up sidebar callbacks
         sessionSidebar.setOnSessionSelected(chatSessionController::handleSessionSelected);
         sessionSidebar.setOnSessionChanged(chatSessionController::handleSessionChanged);
 
@@ -123,19 +121,18 @@ public class MainController {
     }
 
     private void initializeAPIKeys() {
-        // Initialize API key service and load key
         APIKeyService apiKeyService = APIKeyService.getInstance();
         boolean hasApiKey = apiKeyService.loadApiKey();
 
-        // Exit application if no API key found
         if (!hasApiKey) {
-            AlertHelper.showError(
-                    "Missing API Key",
-                    "OpenAI API Key Not Found",
-                    "No OPENAI_API_KEY found in .env file.\n\n" +
-                            "Please create a .env file in the project root directory with:\n" +
-                            "OPENAI_API_KEY=your-api-key-here\n\n" +
-                            "The application will now exit.");
+            AlertHelper.showError("Missing API Key",
+                    "OpenAI API Key Not Found", """
+                            No OPENAI_API_KEY found in .env file.
+
+                            Please create a .env file in the project root directory with:
+                            OPENAI_API_KEY=your-api-key-here
+
+                            The application will now exit.""");
 
             Platform.exit();
             return;
@@ -152,12 +149,13 @@ public class MainController {
                 } else {
                     statusLabel.setText("Invalid API Key");
 
-                    AlertHelper.showError(
-                            "Invalid API Key",
-                            "API Key Validation Failed",
-                            "The OPENAI_API_KEY in your .env file is invalid.\n\n" +
-                                    "Please check your .env file and ensure it contains a valid OpenAI API key.\n\n" +
-                                    "The application will now exit.");
+                    AlertHelper.showError("Invalid API Key",
+                            "API Key Validation Failed", """
+                                    The OPENAI_API_KEY in your .env file is invalid.
+
+                                    Please check your .env file and ensure it contains a valid OpenAI API key.
+
+                                    The application will now exit.""");
 
                     Platform.exit();
                 }

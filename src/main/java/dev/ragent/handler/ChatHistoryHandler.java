@@ -123,8 +123,10 @@ public class ChatHistoryHandler {
 
                 if (history.isEmpty()) {
                     ChatAreaMessage emptyMessage = new ChatAreaMessage(
-                            "Start a conversation!\n\n" +
-                                    "Send a message to chat with your knowledgebase.");
+                            """
+                                    Start a conversation!
+
+                                    Send a message to chat with your knowledgebase.""");
                     chatContainer.getChildren().add(emptyMessage);
                     logger.info("No chat history found for session: {}", currentSession.getName());
                 } else {
@@ -175,8 +177,10 @@ public class ChatHistoryHandler {
             chatContainer.getChildren().removeIf(node -> node instanceof ChatMessageEntry);
 
             ChatAreaMessage emptyMessage = new ChatAreaMessage(
-                    "Start a conversation!\n\n" +
-                            "Send a message to chat with your knowledgebase.");
+                    """
+                            Start a conversation!
+
+                            Send a message to chat with your knowledgebase.""");
             chatContainer.getChildren().add(emptyMessage);
 
             logger.info("Session successfully cleared: id={}, name='{}'",

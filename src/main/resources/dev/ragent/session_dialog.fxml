@@ -7,13 +7,42 @@
     styleClass="dialog-content">
 
     <VBox>
-        <Label text="Session Name:" styleClass="dialog-label" />
+        <Label text="Session Name" styleClass="dialog-label" />
+        <Label text="A unique name to identify this chat session" styleClass="dialog-hint"
+            style="-fx-padding: -4 0 8 0;" />
         <TextField fx:id="nameField" promptText="Enter session name" />
     </VBox>
 
     <VBox>
-        <Label text="Model:" styleClass="dialog-label" />
-        <ComboBox fx:id="modelComboBox" />
+        <Label text="Model" styleClass="dialog-label" />
+        <Label text="The AI model to use for generating responses" styleClass="dialog-hint"
+            style="-fx-padding: -4 0 8 0;" />
+        <ComboBox fx:id="modelComboBox" maxWidth="Infinity" />
+    </VBox>
+
+    <VBox>
+        <HBox alignment="CENTER_LEFT" spacing="8">
+            <Label text="Temperature:" styleClass="dialog-label" />
+            <Label fx:id="temperatureValueLabel" text="1.0" styleClass="dialog-label" />
+        </HBox>
+        <Label
+            text="Controls randomness: lower values are more focused, higher values are more creative"
+            styleClass="dialog-hint" style="-fx-padding: -4 0 8 0;" />
+        <Slider fx:id="temperatureSlider" min="0.0" max="2.0" value="1.0"
+            blockIncrement="0.1" majorTickUnit="0.5" minorTickCount="4"
+            snapToTicks="true" showTickMarks="true" showTickLabels="true" />
+    </VBox>
+
+    <VBox>
+        <HBox alignment="CENTER_LEFT" spacing="8">
+            <Label text="Top K Results:" styleClass="dialog-label" />
+            <Label fx:id="topKValueLabel" text="5" styleClass="dialog-label" />
+        </HBox>
+        <Label text="Number of relevant documents to retrieve from the knowledge base"
+            styleClass="dialog-hint" style="-fx-padding: -4 0 8 0;" />
+        <Slider fx:id="topKSlider" min="1" max="20" value="5"
+            blockIncrement="1" majorTickUnit="5" minorTickCount="4"
+            snapToTicks="true" showTickMarks="true" showTickLabels="true" />
     </VBox>
 
     <VBox>

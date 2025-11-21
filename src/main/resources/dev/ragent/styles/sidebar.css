@@ -32,6 +32,12 @@
   transition: -fx-background-color 0.1s ease;
 }
 
+.sidebarSessionEntry:focused {
+  -fx-background-color: -color-bg-secondary;
+  -fx-background-insets: 0;
+  -fx-border-width: 0;
+}
+
 .sidebarSessionEntry:hover {
   -fx-background-color: -color-hover;
 }
@@ -40,18 +46,10 @@
   -fx-background-color: -color-selected;
 }
 
+.sidebarSessionEntry.selected:focused {
+  -fx-background-color: -color-selected;
+}
+
 .sidebarSessionEntry.selected Label {
   -fx-font-weight: bold;
-}
-
-#sessionNameLabel {
-  -fx-font-size: 16;
-  -fx-font-weight: bold;
-  -fx-text-overrun: ellipsis;
-}
-
-#sessionCreatedLabel {
-  -fx-font-size: 11;
-  -fx-text-fill: -color-text-secondary;
-  -fx-padding: 4 0 0 0;
 }

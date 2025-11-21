@@ -4,6 +4,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
@@ -11,6 +13,7 @@ import java.util.List;
 
 import dev.ragent.model.Session;
 import dev.ragent.service.DatabaseService;
+import dev.ragent.util.Icon;
 
 /**
  * Dialog for editing an existing session.
@@ -20,6 +23,14 @@ public class EditSessionDialog extends BaseDialog {
     private TextField nameField;
     @FXML
     private ComboBox<String> modelComboBox;
+    @FXML
+    private Slider temperatureSlider;
+    @FXML
+    private Label temperatureValueLabel;
+    @FXML
+    private Slider topKSlider;
+    @FXML
+    private Label topKValueLabel;
     @FXML
     private CheckBox queryTransformationCheckBox;
 
@@ -43,7 +54,21 @@ public class EditSessionDialog extends BaseDialog {
 
         queryTransformationCheckBox.setSelected(session.isUseQueryTransformation());
 
+        // Setup slider listeners first
+        temperatureSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            temperatureValueLabel.setText(String.format("%.1f", newVal.doubleValue()));
+        });
+
+        topKSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            topKValueLabel.setText(String.valueOf(newVal.intValue()));
+        });
+
+        // Set slider values from session (this will trigger the listeners)
+        temperatureSlider.setValue(session.getTemperature());
+        topKSlider.setValue(session.getTopK());
+
         Button okBtn = (Button) stage.getScene().lookup("#okButton");
+        okBtn.setGraphic(Icon.load("tabler--device-floppy.svg"));
         okBtn.setText("Save");
 
         // Disable OK button if name is empty
@@ -84,16 +109,21 @@ public class EditSessionDialog extends BaseDialog {
         String newName = nameField.getText().trim();
         String newModel = modelComboBox.getValue();
         boolean useQueryTransformation = queryTransformationCheckBox.isSelected();
+        double temperature = temperatureSlider.getValue();
+        int topK = (int) topKSlider.getValue();
 
         System.out.println("[EditSessionDialog] Updating session:");
         System.out.println("  - Name: " + newName);
         System.out.println("  - Model: " + newModel);
         System.out.println("  - useQueryTransformation: " + useQueryTransformation);
+        System.out.println("  - temperature: " + temperature);
+        System.out.println("  - topK: " + topK);
 
         if (!newName.isEmpty()) {
             // Update database - the in-memory session will be refreshed by
             // handleSessionChanged()
-            DatabaseService.getInstance().updateSession(session.getId(), newName, newModel, useQueryTransformation);
+            DatabaseService.getInstance().updateSession(session.getId(), newName, newModel, useQueryTransformation,
+                    temperature, topK);
 
             System.out.println("[EditSessionDialog] Database updated, session will be refreshed by callback");
 

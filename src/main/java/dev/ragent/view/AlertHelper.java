@@ -108,20 +108,12 @@ public class AlertHelper {
 
         // Add alert type class for styling
         switch (alert.getAlertType()) {
-            case ERROR:
-                dialogPane.getStyleClass().add("error");
-                break;
-            case WARNING:
-                dialogPane.getStyleClass().add("warning");
-                break;
-            case INFORMATION:
-                dialogPane.getStyleClass().add("information");
-                break;
-            case CONFIRMATION:
-                dialogPane.getStyleClass().add("confirmation");
-                break;
-            default:
-                break;
+            case ERROR -> dialogPane.getStyleClass().add("error");
+            case WARNING -> dialogPane.getStyleClass().add("warning");
+            case INFORMATION -> dialogPane.getStyleClass().add("information");
+            case CONFIRMATION -> dialogPane.getStyleClass().add("confirmation");
+            default -> {
+            }
         }
 
         // Apply button styles
@@ -145,23 +137,16 @@ public class AlertHelper {
      * Set custom SVG icons for alert dialogs
      */
     private static void setCustomIcon(Alert alert, boolean noHeader) {
-        String iconName = null;
+        String iconName;
 
         switch (alert.getAlertType()) {
-            case ERROR:
-                iconName = "tabler--square-x.svg";
-                break;
-            case WARNING:
-                iconName = "tabler--alert-triangle.svg";
-                break;
-            case INFORMATION:
-                iconName = "tabler--info-circle.svg";
-                break;
-            case CONFIRMATION:
-                iconName = "tabler--help-hexagon.svg";
-                break;
-            default:
+            case ERROR -> iconName = "tabler--square-x.svg";
+            case WARNING -> iconName = "tabler--alert-triangle.svg";
+            case INFORMATION -> iconName = "tabler--info-circle.svg";
+            case CONFIRMATION -> iconName = "tabler--help-hexagon.svg";
+            default -> {
                 return;
+            }
         }
 
         try {

@@ -62,7 +62,7 @@ public class ResourceManagementController {
     private ResourceDeletionHandler deletionHandler;
 
     // Selection tracking
-    private Set<Resource> selectedResources = new HashSet<>();
+    private final Set<Resource> selectedResources = new HashSet<>();
 
     @FXML
     private void initialize() {
@@ -358,13 +358,9 @@ public class ResourceManagementController {
     }
 
     private void openContentViewer(Resource resource) {
-        try {
-            ContentViewer viewer = new ContentViewer(resource, getOwnerStage());
-            viewer.setOnSaveCallback(() -> handleContentSaved(resource));
-            viewer.show();
-        } catch (Exception e) {
-            AlertHelper.showError("Error", "Failed to open content viewer: " + e.getMessage());
-        }
+        ContentViewer viewer = new ContentViewer(resource, getOwnerStage());
+        viewer.setOnSaveCallback(() -> handleContentSaved(resource));
+        viewer.show();
     }
 
     private void handleContentSaved(Resource resource) {

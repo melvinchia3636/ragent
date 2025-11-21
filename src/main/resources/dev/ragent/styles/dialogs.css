@@ -1,6 +1,6 @@
 .dialog-content {
   -fx-background-color: -color-bg-secondary;
-  -fx-spacing: 16;
+  -fx-spacing: 20;
   -fx-padding: 20;
 }
 
@@ -113,7 +113,6 @@
   -fx-font-size: 16;
   -fx-font-weight: bold;
   -fx-text-fill: -color-text-primary;
-  -fx-padding: 0 0 16 0;
 }
 
 /* ============================================

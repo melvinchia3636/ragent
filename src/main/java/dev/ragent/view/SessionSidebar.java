@@ -208,9 +208,8 @@ public class SessionSidebar extends VBox {
      */
     private void refreshSessionStyling() {
         for (int i = 0; i < sessionListContainer.getChildren().size(); i++) {
-            if (sessionListContainer.getChildren().get(i) instanceof SidebarSessionEntry) {
-                SidebarSessionEntry sessionBox = (SidebarSessionEntry) sessionListContainer.getChildren().get(i);
-                Session session = sessions.get(i);
+            if (sessionListContainer.getChildren().get(i) instanceof SidebarSessionEntry sessionBox) {
+                Session session = sessionBox.getSession();
 
                 // Apply bold style if this is the selected session
                 boolean isSelected = currentSession != null && currentSession.getId().equals(session.getId());

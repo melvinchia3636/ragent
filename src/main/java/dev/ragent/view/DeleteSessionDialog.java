@@ -3,7 +3,6 @@ package dev.ragent.view;
 import dev.ragent.model.Session;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
@@ -19,7 +18,6 @@ public class DeleteSessionDialog extends BaseDialog {
     @FXML
     private Button okButton;
 
-    private final Session session;
     private boolean confirmed = false;
 
     /**
@@ -30,7 +28,6 @@ public class DeleteSessionDialog extends BaseDialog {
      */
     public DeleteSessionDialog(Session session, Stage owner) {
         super(owner, "Delete Session", "/dev/ragent/delete_session_dialog.fxml");
-        this.session = session;
 
         // Set header text
         headerLabel.setText("Delete \"" + session.getName() + "\"?");

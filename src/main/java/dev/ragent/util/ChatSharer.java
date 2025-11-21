@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -146,7 +147,7 @@ public class ChatSharer {
      * @throws Exception if upload fails
      */
     private static String uploadToPastebin(String content, String title, String apiKey) throws Exception {
-        URL url = new URL(PASTEBIN_API_URL);
+        URL url = new URI(PASTEBIN_API_URL).toURL();
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);

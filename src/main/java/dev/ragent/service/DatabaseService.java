@@ -59,6 +59,8 @@ public class DatabaseService {
                 "name TEXT NOT NULL, " +
                 "model TEXT NOT NULL DEFAULT 'gpt-4o-mini', " +
                 "use_query_transformation INTEGER NOT NULL DEFAULT 1, " +
+                "temperature REAL NOT NULL DEFAULT 1.0, " +
+                "top_k INTEGER NOT NULL DEFAULT 5, " +
                 "created_at TEXT NOT NULL" +
                 ")";
 
@@ -75,7 +77,16 @@ public class DatabaseService {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createSessionsTable);
             stmt.execute(createMessagesTable);
-            logger.info("Database tables created successfully");
+
+            // Add columns if they don't exist (for existing databases)
+            try {
+                stmt.execute("ALTER TABLE sessions ADD COLUMN temperature REAL NOT NULL DEFAULT 1.0");
+                stmt.execute("ALTER TABLE sessions ADD COLUMN top_k INTEGER NOT NULL DEFAULT 5");
+            } catch (SQLException e) {
+                // Columns already exist, ignore
+            }
+
+            logger.info("Database tables initialized successfully");
         }
     }
 
@@ -85,16 +96,19 @@ public class DatabaseService {
     public Session createSession(String name) {
         Session session = new Session(name);
 
-        logger.info("Creating new session: id={}, name='{}', model={}, queryTransformation={}",
-                session.getId(), name, session.getModel(), session.isUseQueryTransformation());
+        logger.info("Creating new session: id={}, name='{}', model={}, queryTransformation={}, temperature={}, topK={}",
+                session.getId(), name, session.getModel(), session.isUseQueryTransformation(), session.getTemperature(),
+                session.getTopK());
 
-        String sql = "INSERT INTO sessions (id, name, model, use_query_transformation, created_at) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO sessions (id, name, model, use_query_transformation, temperature, top_k, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, session.getId());
             pstmt.setString(2, session.getName());
             pstmt.setString(3, session.getModel());
             pstmt.setInt(4, session.isUseQueryTransformation() ? 1 : 0);
-            pstmt.setString(5, session.getCreatedAt().toString());
+            pstmt.setDouble(5, session.getTemperature());
+            pstmt.setInt(6, session.getTopK());
+            pstmt.setString(7, session.getCreatedAt().toString());
             pstmt.executeUpdate();
 
             File sessionFolder = new File("knowledgebase_storage/" + session.getId());
@@ -113,7 +127,7 @@ public class DatabaseService {
      */
     public List<Session> getAllSessions() throws SQLException {
         List<Session> sessions = new ArrayList<>();
-        String sql = "SELECT id, name, model, use_query_transformation, created_at FROM sessions ORDER BY created_at DESC";
+        String sql = "SELECT id, name, model, use_query_transformation, temperature, top_k, created_at FROM sessions ORDER BY created_at DESC";
 
         try (Statement stmt = connection.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
@@ -123,8 +137,10 @@ public class DatabaseService {
                 String name = rs.getString("name");
                 String model = rs.getString("model");
                 boolean useQueryTransformation = rs.getInt("use_query_transformation") == 1;
+                double temperature = rs.getDouble("temperature");
+                int topK = rs.getInt("top_k");
                 LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
-                sessions.add(new Session(id, name, model, useQueryTransformation, createdAt));
+                sessions.add(new Session(id, name, model, useQueryTransformation, temperature, topK, createdAt));
             }
         }
 
@@ -135,7 +151,7 @@ public class DatabaseService {
      * Get a session by ID
      */
     public Session getSession(String id) {
-        String sql = "SELECT id, name, model, use_query_transformation, created_at FROM sessions WHERE id = ?";
+        String sql = "SELECT id, name, model, use_query_transformation, temperature, top_k, created_at FROM sessions WHERE id = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, id);
@@ -146,12 +162,15 @@ public class DatabaseService {
                 String model = rs.getString("model");
                 int useQueryTransformationInt = rs.getInt("use_query_transformation");
                 boolean useQueryTransformation = useQueryTransformationInt == 1;
+                double temperature = rs.getDouble("temperature");
+                int topK = rs.getInt("top_k");
                 LocalDateTime createdAt = LocalDateTime.parse(rs.getString("created_at"));
 
-                logger.debug("Retrieved session: id={}, name='{}', model={}, queryTransformation={}",
-                        id, name, model, useQueryTransformation);
+                logger.debug(
+                        "Retrieved session: id={}, name='{}', model={}, queryTransformation={}, temperature={}, topK={}",
+                        id, name, model, useQueryTransformation, temperature, topK);
 
-                return new Session(id, name, model, useQueryTransformation, createdAt);
+                return new Session(id, name, model, useQueryTransformation, temperature, topK, createdAt);
             } else {
                 logger.debug("No session found with id: {}", id);
             }
@@ -163,19 +182,23 @@ public class DatabaseService {
     }
 
     /**
-     * Update a session's name, model, and query transformation setting
+     * Update a session's name, model, query transformation setting, temperature,
+     * and top K
      */
-    public void updateSession(String id, String newName, String newModel, boolean useQueryTransformation) {
-        String sql = "UPDATE sessions SET name = ?, model = ?, use_query_transformation = ? WHERE id = ?";
+    public void updateSession(String id, String newName, String newModel, boolean useQueryTransformation,
+            double temperature, int topK) {
+        String sql = "UPDATE sessions SET name = ?, model = ?, use_query_transformation = ?, temperature = ?, top_k = ? WHERE id = ?";
 
-        logger.info("Updating session: id={}, name='{}', model={}, queryTransformation={}",
-                id, newName, newModel, useQueryTransformation);
+        logger.info("Updating session: id={}, name='{}', model={}, queryTransformation={}, temperature={}, topK={}",
+                id, newName, newModel, useQueryTransformation, temperature, topK);
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, newName);
             pstmt.setString(2, newModel);
             pstmt.setInt(3, useQueryTransformation ? 1 : 0);
-            pstmt.setString(4, id);
+            pstmt.setDouble(4, temperature);
+            pstmt.setInt(5, topK);
+            pstmt.setString(6, id);
             int rowsAffected = pstmt.executeUpdate();
 
             if (rowsAffected > 0) {

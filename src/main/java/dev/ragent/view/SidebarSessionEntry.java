@@ -5,12 +5,8 @@ import dev.ragent.service.APIKeyService;
 import dev.ragent.service.DatabaseService;
 import dev.ragent.util.ChatExporter;
 import dev.ragent.util.ChatSharer;
-import dev.ragent.util.Icon;
 import javafx.geometry.Pos;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -23,8 +19,17 @@ import javafx.stage.Stage;
 public final class SidebarSessionEntry extends HBox {
 
     private final Session session;
-    private final Label nameLabel;
     private final Runnable onSessionChanged;
+    private final SidebarSessionEntryContextMenu.MenuItemData[] menuItems = new SidebarSessionEntryContextMenu.MenuItemData[] {
+            new SidebarSessionEntryContextMenu.MenuItemData("Edit Session", "tabler--pencil.svg", this::handleEdit,
+                    false),
+            new SidebarSessionEntryContextMenu.MenuItemData("Export Chat", "tabler--file-export.svg",
+                    this::handleExportChat, false),
+            new SidebarSessionEntryContextMenu.MenuItemData("Share Chat", "tabler--share.svg", this::handleShareChat,
+                    !APIKeyService.getInstance().hasPastebinApiKey()),
+            new SidebarSessionEntryContextMenu.MenuItemData("Delete Session", "tabler--trash-x.svg",
+                    this::handleDelete, false)
+    };
 
     public SidebarSessionEntry(
             Session session,
@@ -37,67 +42,27 @@ public final class SidebarSessionEntry extends HBox {
         setAlignment(Pos.CENTER);
         getStyleClass().add("sidebarSessionEntry");
 
-        nameLabel = new Label(session.getName());
-        MenuButton menuButton = createMenuButton();
+        initializeComponents();
+
+        updateStyling(isSelected);
+
+        setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY && onSessionSelected != null) {
+                onSessionSelected.run();
+            }
+        });
+    }
+
+    private void initializeComponents() {
+        Label nameLabel = new Label(session.getName());
 
         Pane spacer = new Pane();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        SidebarSessionEntryContextMenu menuButton = new SidebarSessionEntryContextMenu();
+        menuButton.setMenuItems(menuItems);
+
         getChildren().addAll(nameLabel, spacer, menuButton);
-        updateStyling(isSelected);
-
-        setOnMouseClicked(e -> {
-            // Only respond to primary (left) mouse button clicks
-            if (e.getButton() == MouseButton.PRIMARY) {
-                if (onSessionSelected != null) {
-                    onSessionSelected.run();
-                }
-            }
-            // Consume the event to prevent default behavior
-            e.consume();
-        });
-
-        // Disable focus traversal to prevent focus styling issues
-        setFocusTraversable(false);
-    }
-
-    private MenuButton createMenuButton() {
-        MenuButton menuButton = new MenuButton();
-        menuButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        menuButton.setGraphicTextGap(0.0);
-        menuButton.setMnemonicParsing(false);
-        menuButton.setStyle("-fx-background-color: transparent;");
-
-        menuButton.setGraphic(
-                Icon.load("tabler--dots-vertical.svg"));
-
-        MenuItem renameItem = new MenuItem("Edit");
-        renameItem.setGraphic(Icon.load("tabler--pencil.svg"));
-        renameItem.setOnAction(e -> handleEdit());
-
-        MenuItem exportItem = new MenuItem("Export Chat");
-        exportItem.setGraphic(Icon.load("tabler--file-export.svg"));
-        exportItem.setOnAction(e -> handleExportChat());
-
-        menuButton.getItems().addAll(renameItem, exportItem);
-
-        // Add Share Chat menu item only if Pastebin API key is available
-        APIKeyService apiKeyService = APIKeyService.getInstance();
-        if (apiKeyService != null && apiKeyService.hasPastebinApiKey()) {
-            MenuItem shareItem = new MenuItem("Share Chat");
-            shareItem.setGraphic(Icon.load("tabler--share.svg"));
-            shareItem.setOnAction(e -> handleShareChat());
-            menuButton.getItems().addAll(shareItem);
-        }
-
-        MenuItem deleteItem = new MenuItem("Delete");
-        deleteItem.getStyleClass().add("dangerous");
-        deleteItem.setGraphic(Icon.load("tabler--trash-x.svg"));
-        deleteItem.setOnAction(e -> handleDelete());
-
-        menuButton.getItems().add(deleteItem);
-
-        return menuButton;
     }
 
     private void handleEdit() {
@@ -141,7 +106,9 @@ public final class SidebarSessionEntry extends HBox {
 
     public void updateStyling(boolean isSelected) {
         if (isSelected) {
-            getStyleClass().add("selected");
+            if (!getStyleClass().contains("selected")) {
+                getStyleClass().add("selected");
+            }
         } else {
             getStyleClass().remove("selected");
         }

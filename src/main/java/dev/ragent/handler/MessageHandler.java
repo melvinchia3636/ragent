@@ -77,6 +77,8 @@ public class MessageHandler {
 
         logger.info("========== Sending Message ==========");
         logger.info("Session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
+        logger.info("Model: {}, Temperature: {}, Top K: {}", currentSession.getModel(), currentSession.getTemperature(),
+                currentSession.getTopK());
         logger.info("Message length: {} characters", userMessage.length());
         logger.debug("Message content: {}", userMessage);
 
@@ -113,6 +115,7 @@ public class MessageHandler {
                 ragService.queryStreaming(finalUserMessage, new RAGService.StreamingCallback() {
                     private final StringBuilder responseBuilder = new StringBuilder();
                     private List<String> sources = new ArrayList<>();
+                    private int segmentCount = 0;
 
                     @Override
                     public void onProgress(String progressMessage) {
@@ -123,8 +126,9 @@ public class MessageHandler {
                     }
 
                     @Override
-                    public void onStart(List<String> sourceDocs) {
+                    public void onStart(List<String> sourceDocs, int segments) {
                         sources = sourceDocs;
+                        segmentCount = segments;
                     }
 
                     @Override

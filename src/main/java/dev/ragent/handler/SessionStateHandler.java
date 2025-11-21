@@ -102,9 +102,10 @@ public class SessionStateHandler {
             String provider = Constants.getProvider(session.getModel());
             if (APIKeyService.getInstance().hasApiKey(provider)) {
                 this.ragService = new RAGService(session.getId(), session.getModel(),
-                        session.isUseQueryTransformation());
-                logger.info("Initialized RAGService with model={}, queryTransformation={}",
-                        session.getModel(), session.isUseQueryTransformation());
+                        session.isUseQueryTransformation(), session.getTemperature(), session.getTopK());
+                logger.info("Initialized RAGService with model={}, queryTransformation={}, temperature={}, topK={}",
+                        session.getModel(), session.isUseQueryTransformation(), session.getTemperature(),
+                        session.getTopK());
             } else {
                 logger.warn("API key for provider '{}' not available, RAGService not initialized", provider);
             }
@@ -135,11 +136,13 @@ public class SessionStateHandler {
      */
     public void updateRagService(String newModel) {
         if (currentSession != null) {
-            logger.info("Updating RAGService: sessionId={}, model={}, queryTransformation={}",
-                    currentSession.getId(), newModel, currentSession.isUseQueryTransformation());
+            logger.info("Updating RAGService: sessionId={}, model={}, queryTransformation={}, temperature={}, topK={}",
+                    currentSession.getId(), newModel, currentSession.isUseQueryTransformation(),
+                    currentSession.getTemperature(), currentSession.getTopK());
 
             this.ragService = new RAGService(currentSession.getId(), newModel,
-                    currentSession.isUseQueryTransformation());
+                    currentSession.isUseQueryTransformation(), currentSession.getTemperature(),
+                    currentSession.getTopK());
 
             logger.info("RAGService successfully updated");
         } else {
@@ -183,10 +186,16 @@ public class SessionStateHandler {
         String newName = updatedSession.getName();
         boolean oldUseQueryTransformation = currentSession.isUseQueryTransformation();
         boolean newUseQueryTransformation = updatedSession.isUseQueryTransformation();
+        double oldTemperature = currentSession.getTemperature();
+        double newTemperature = updatedSession.getTemperature();
+        int oldTopK = currentSession.getTopK();
+        int newTopK = updatedSession.getTopK();
 
         boolean nameChanged = !oldName.equals(newName);
         boolean modelChanged = !oldModel.equals(newModel);
         boolean queryTransformationChanged = oldUseQueryTransformation != newUseQueryTransformation;
+        boolean temperatureChanged = oldTemperature != newTemperature;
+        boolean topKChanged = oldTopK != newTopK;
 
         // Log all changes
         if (nameChanged) {
@@ -198,8 +207,14 @@ public class SessionStateHandler {
         if (queryTransformationChanged) {
             logger.info("Query transformation changed: {} -> {}", oldUseQueryTransformation, newUseQueryTransformation);
         }
+        if (temperatureChanged) {
+            logger.info("Temperature changed: {} -> {}", oldTemperature, newTemperature);
+        }
+        if (topKChanged) {
+            logger.info("Top K changed: {} -> {}", oldTopK, newTopK);
+        }
 
-        if (!nameChanged && !modelChanged && !queryTransformationChanged) {
+        if (!nameChanged && !modelChanged && !queryTransformationChanged && !temperatureChanged && !topKChanged) {
             logger.debug("No changes detected in session properties");
         }
 
@@ -208,7 +223,7 @@ public class SessionStateHandler {
         updateSessionInfoDisplay(currentSession);
 
         // Reinitialize RAGService if needed
-        if ((modelChanged || queryTransformationChanged)) {
+        if ((modelChanged || queryTransformationChanged || temperatureChanged || topKChanged)) {
             if (!APIKeyService.getInstance().hasApiKey()) {
                 logger.warn("API key not available, cannot reinitialize RAGService");
             } else {
@@ -234,7 +249,8 @@ public class SessionStateHandler {
             String queryTransformationStatus = session.isUseQueryTransformation()
                     ? "enabled"
                     : "disabled";
-            modelLabel.setText(session.getModel() + " (query transformation " + queryTransformationStatus + ")");
+            modelLabel.setText(session.getModel().replace("|", " / ") + " (query transformation "
+                    + queryTransformationStatus + ")");
 
             sessionHeader.setVisible(true);
             sessionHeader.setManaged(true);

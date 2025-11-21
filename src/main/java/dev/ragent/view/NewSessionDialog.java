@@ -4,6 +4,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
@@ -21,6 +23,14 @@ public class NewSessionDialog extends BaseDialog {
     private TextField nameField;
     @FXML
     private ComboBox<String> modelComboBox;
+    @FXML
+    private Slider temperatureSlider;
+    @FXML
+    private Label temperatureValueLabel;
+    @FXML
+    private Slider topKSlider;
+    @FXML
+    private Label topKValueLabel;
     @FXML
     private CheckBox queryTransformationCheckBox;
     @FXML
@@ -40,6 +50,19 @@ public class NewSessionDialog extends BaseDialog {
         ModelComboBoxHelper.setDefaultModel(modelComboBox, availableModels);
 
         queryTransformationCheckBox.setSelected(true);
+
+        // Setup slider listeners before setting values
+        temperatureSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            temperatureValueLabel.setText(String.format("%.1f", newVal.doubleValue()));
+        });
+
+        topKSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            topKValueLabel.setText(String.valueOf(newVal.intValue()));
+        });
+
+        // Initialize labels with current slider values
+        temperatureValueLabel.setText(String.format("%.1f", temperatureSlider.getValue()));
+        topKValueLabel.setText(String.valueOf((int) topKSlider.getValue()));
 
         okButton.setText("Create");
         okButton.setDisable(true);
@@ -84,6 +107,8 @@ public class NewSessionDialog extends BaseDialog {
         String name = nameField.getText().trim();
         String model = modelComboBox.getValue();
         boolean useQueryTransformation = queryTransformationCheckBox.isSelected();
+        double temperature = temperatureSlider.getValue();
+        int topK = (int) topKSlider.getValue();
 
         if (name.isEmpty()) {
             return null;
@@ -101,7 +126,9 @@ public class NewSessionDialog extends BaseDialog {
         Session newSession = databaseService.createSession(name);
         newSession.setModel(model);
         newSession.setUseQueryTransformation(useQueryTransformation);
-        databaseService.updateSession(newSession.getId(), name, model, useQueryTransformation);
+        newSession.setTemperature(temperature);
+        newSession.setTopK(topK);
+        databaseService.updateSession(newSession.getId(), name, model, useQueryTransformation, temperature, topK);
 
         return newSession;
     }

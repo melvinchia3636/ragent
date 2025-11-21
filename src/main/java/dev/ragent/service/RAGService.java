@@ -31,7 +31,6 @@ import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
-import dev.ragent.model.QueryResponse;
 import dev.ragent.util.Constants;
 
 /**
@@ -52,22 +51,24 @@ public class RAGService {
     private final RerankingService rerankingService;
     private final QueryTransformationService queryTransformationService;
     private final boolean useQueryTransformation;
+    private final int topK;
 
     // Progress callback interface
     public interface ProgressCallback {
         void onProgress(String message, int current, int total);
     }
 
-    private static final int MAX_RESULTS = 5;
     private static final double MIN_SCORE = 0.5;
-    private static final int MAX_RESULTS_BEFORE_RERANK = 15; // Retrieve more results for re-ranking
+    private static final int MAX_RESULTS_BEFORE_RERANK = 20; // Retrieve more results for re-ranking
 
     private final String sessionId;
 
-    public RAGService(String sessionId, String modelName, boolean useQueryTransformation) {
+    public RAGService(String sessionId, String modelName, boolean useQueryTransformation, double temperature,
+            int topK) {
         this.sessionId = sessionId;
         this.modelName = modelName;
         this.useQueryTransformation = useQueryTransformation;
+        this.topK = topK;
         this.sessionHistory = new ArrayList<>();
         this.indexedFiles = new HashMap<>();
 
@@ -89,40 +90,40 @@ public class RAGService {
                     .baseUrl("https://api.groq.com/openai/v1")
                     .apiKey(apiKey)
                     .modelName(actualModelName)
-                    .temperature(1.0)
+                    .temperature(temperature)
                     .build();
 
             this.streamingChatModel = OpenAiStreamingChatModel.builder()
                     .baseUrl("https://api.groq.com/openai/v1")
                     .apiKey(apiKey)
                     .modelName(actualModelName)
-                    .temperature(1.0)
+                    .temperature(temperature)
                     .build();
         } else if ("gemini".equalsIgnoreCase(provider)) {
             this.chatModel = OpenAiChatModel.builder()
                     .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
                     .apiKey(apiKey)
                     .modelName(actualModelName)
-                    .temperature(1.0)
+                    .temperature(temperature)
                     .build();
 
             this.streamingChatModel = OpenAiStreamingChatModel.builder()
                     .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
                     .apiKey(apiKey)
                     .modelName(actualModelName)
-                    .temperature(1.0)
+                    .temperature(temperature)
                     .build();
         } else {
             this.chatModel = OpenAiChatModel.builder()
                     .apiKey(apiKey)
                     .modelName(actualModelName)
-                    .temperature(1.0)
+                    .temperature(temperature)
                     .build();
 
             this.streamingChatModel = OpenAiStreamingChatModel.builder()
                     .apiKey(apiKey)
                     .modelName(actualModelName)
-                    .temperature(1.0)
+                    .temperature(temperature)
                     .build();
         }
 
@@ -186,7 +187,22 @@ public class RAGService {
     }
 
     /**
-     * Query the RAG system with a user message
+     * Callback interface for streaming responses
+     */
+    public interface StreamingCallback {
+        void onProgress(String progressMessage);
+
+        void onStart(List<String> sources, int segmentCount);
+
+        void onNext(String token);
+
+        void onComplete(String fullResponse);
+
+        void onError(Throwable error);
+    }
+
+    /**
+     * Query the RAG system with a user message and stream the response via callback
      * Basically, our final prompt to the chat model is:
      * 
      * Relevant context:
@@ -204,122 +220,6 @@ public class RAGService {
      * AI: "Melvin Chia is 19 years old."
      * User: "How about his brother?"
      * AI: "Melvin Chia's brother is 28 years old."
-     */
-    public dev.ragent.model.QueryResponse query(String userMessage) {
-        // Build contextualized query by incorporating recent session history
-        String contextualizedQuery = buildContextualizedQuery(userMessage);
-
-        // Generate query variations for multi-query retrieval (if enabled)
-        List<String> queryVariations;
-        if (useQueryTransformation) {
-            queryVariations = queryTransformationService.generateQueryVariations(contextualizedQuery);
-            logger.debug("Using {} query variations for retrieval", queryVariations.size());
-        } else {
-            queryVariations = List.of(contextualizedQuery);
-            logger.debug("Query transformation disabled, using single query");
-        }
-
-        // Perform multi-query retrieval: search with all variations and merge results
-        Set<EmbeddingMatch<TextSegment>> allMatches = new HashSet<>();
-        for (String queryVariation : queryVariations) {
-            Embedding queryEmbedding = embeddingModel.embed(queryVariation).content();
-
-            EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
-                    .queryEmbedding(queryEmbedding)
-                    .maxResults(MAX_RESULTS_BEFORE_RERANK)
-                    .minScore(MIN_SCORE)
-                    .build();
-
-            EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
-            allMatches.addAll(searchResult.matches());
-        }
-
-        List<EmbeddingMatch<TextSegment>> relevantSegments = new ArrayList<>(allMatches);
-        logger.debug("Multi-query retrieval found {} unique segments", relevantSegments.size());
-
-        // Re-rank the results using the contextualized query for consistency
-        List<EmbeddingMatch<TextSegment>> rerankedSegments = rerankingService.rerank(contextualizedQuery,
-                relevantSegments);
-
-        // Take only top MAX_RESULTS after re-ranking
-        if (rerankedSegments.size() > MAX_RESULTS) {
-            rerankedSegments = rerankedSegments.subList(0, MAX_RESULTS);
-        }
-
-        // Extract unique source file names
-        Set<String> sourceFiles = new HashSet<>();
-        for (EmbeddingMatch<TextSegment> match : rerankedSegments) {
-            TextSegment segment = match.embedded();
-            if (segment.metadata() != null && segment.metadata().containsKey("fileName")) {
-                String fileName = segment.metadata().getString("fileName");
-                sourceFiles.add(fileName);
-            }
-        }
-        logger.debug("Query matched {} segments from documents: {}", rerankedSegments.size(), sourceFiles);
-
-        // Build context from relevant segments
-        StringBuilder context = new StringBuilder();
-        if (!rerankedSegments.isEmpty()) {
-            context.append("Relevant context:\n\n");
-            for (EmbeddingMatch<TextSegment> match : rerankedSegments) {
-                context.append(match.embedded().text()).append("\n\n");
-            }
-        }
-
-        // Build the message with context for the current query
-        String messageWithContext;
-        if (context.length() > 0) {
-            messageWithContext = context + "\nUser question: " + userMessage;
-        } else {
-            messageWithContext = userMessage;
-        }
-
-        // Add user message to session history (without RAG context to avoid
-        // duplication)
-        sessionHistory.add(UserMessage.from(userMessage));
-
-        logger.debug("Sending message to chat model: {} with {} messages in history", modelName,
-                sessionHistory.size());
-
-        // Build chat request with session history + current RAG context
-        // We append the RAG context only to the current message to avoid exponential
-        // growth
-        List<ChatMessage> messagesForRequest = new ArrayList<>(sessionHistory);
-        // Replace the last user message with the version that includes RAG context
-        messagesForRequest.set(messagesForRequest.size() - 1, UserMessage.from(messageWithContext));
-
-        ChatRequest chatRequest = ChatRequest.builder()
-                .messages(messagesForRequest)
-                .build();
-
-        ChatResponse chatResponse = chatModel.chat(chatRequest);
-        AiMessage aiMessage = chatResponse.aiMessage();
-        String responseText = aiMessage.text();
-
-        // Add AI response to session history
-        sessionHistory.add(aiMessage);
-
-        // Return response with sources
-        return new QueryResponse(responseText, new ArrayList<>(sourceFiles));
-    }
-
-    /**
-     * Callback interface for streaming responses
-     */
-    public interface StreamingCallback {
-        void onProgress(String progressMessage);
-
-        void onStart(List<String> sources);
-
-        void onNext(String token);
-
-        void onComplete(String fullResponse);
-
-        void onError(Throwable error);
-    }
-
-    /**
-     * Query with streaming response
      */
     public void queryStreaming(String userMessage, StreamingCallback callback) {
         logger.info("========== Processing Streaming Query ==========");
@@ -388,10 +288,10 @@ public class RAGService {
             // Re-rank using the contextualized query for consistency with retrieval
             List<EmbeddingMatch<TextSegment>> rerankedSegments = rerankingService.rerank(contextualizedQuery, matches);
 
-            // Take top MAX_RESULTS after re-ranking
+            // Take top topK results after re-ranking
             int beforeLimit = rerankedSegments.size();
             rerankedSegments = rerankedSegments.stream()
-                    .limit(MAX_RESULTS)
+                    .limit(topK)
                     .collect(Collectors.toList());
             logger.info("Re-ranking complete: keeping top {} of {} segments", rerankedSegments.size(), beforeLimit);
 
@@ -411,8 +311,8 @@ public class RAGService {
             logger.info("Step 5/5: Generating AI response");
             callback.onProgress("Generating response...");
 
-            // Notify callback with sources
-            callback.onStart(new ArrayList<>(sourceFiles));
+            // Notify callback with sources and segment count
+            callback.onStart(new ArrayList<>(sourceFiles), rerankedSegments.size());
 
             // Build context from relevant segments
             StringBuilder context = new StringBuilder();
@@ -520,13 +420,16 @@ public class RAGService {
 
         for (int i = startIdx; i < sessionHistory.size(); i++) {
             ChatMessage msg = sessionHistory.get(i);
-            if (msg instanceof UserMessage) {
-                contextBuilder.append("User asked: ").append(((UserMessage) msg).singleText()).append(" ");
-            } else if (msg instanceof AiMessage) {
-                // Include a brief snippet of AI response for context
-                String aiText = ((AiMessage) msg).text();
-                String snippet = aiText.length() > 100 ? aiText.substring(0, 100) + "..." : aiText;
-                contextBuilder.append("Assistant answered: ").append(snippet).append(" ");
+            switch (msg) {
+                case UserMessage userMsg -> contextBuilder.append("User asked: ").append(userMsg.singleText()).append(" ");
+                case AiMessage aiMsg -> {
+                    // Include a brief snippet of AI response for context
+                    String aiText = aiMsg.text();
+                    String snippet = aiText.length() > 100 ? aiText.substring(0, 100) + "..." : aiText;
+                    contextBuilder.append("Assistant answered: ").append(snippet).append(" ");
+                }
+                default -> {
+                }
             }
         }
 
