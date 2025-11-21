@@ -224,6 +224,11 @@
   -fx-background-color: -color-bg-secondary;
 }
 
+.message-details-dialog .tab-pane:focused .tab-header-area {
+  -fx-focus-color: transparent;
+  -fx-faint-focus-color: transparent;
+}
+
 .message-details-dialog .tab-pane .tab {
   -fx-background-color: -color-bg-secondary;
   -fx-background-radius: 6 6 0 0;
@@ -234,7 +239,7 @@
 
 .message-details-dialog .tab-pane .tab:selected {
   -fx-background-color: -color-bg-secondary;
-  -fx-border-color: transparent transparent -color-primary transparent;
+  -fx-border-color: transparent transparent -color-text-primary transparent;
   -fx-border-width: 0 0 2 0;
 }
 
@@ -246,7 +251,8 @@
 
 .message-details-dialog .tab-pane .tab:selected .tab-label {
   -fx-text-fill: -color-text-primary;
-  -fx-font-weight: 600;
+  -fx-font-family: "Space Grotesk SemiBold";
+  -fx-font-weight: bold;
 }
 
 .message-details-dialog .tab-pane .tab-content-area {
@@ -337,14 +343,10 @@
 .variation-badge {
   -fx-font-size: 10;
   -fx-font-weight: 600;
-  -fx-text-fill: -color-primary;
-  -fx-background-color: rgba(138, 180, 248, 0.15);
+  -fx-text-fill: -color-bg-primary;
+  -fx-background-color: -color-text-primary;
   -fx-background-radius: 4;
   -fx-padding: 2 6;
-}
-
-:root.dark-theme .variation-badge {
-  -fx-background-color: rgba(138, 180, 248, 0.2);
 }
 
 .variation-text {
@@ -367,4 +369,5 @@
   -fx-background-color: -color-bg-secondary;
   -fx-border-color: -color-border transparent transparent transparent;
   -fx-border-width: 1 0 0 0;
+  -fx-padding: 16;
 }
