@@ -20,7 +20,7 @@ public class QueryTransformationService {
     private static final Logger logger = LogManager.getLogger(QueryTransformationService.class);
 
     private final OpenAiChatModel chatModel;
-    private static final int MAX_VARIATIONS = 1;
+    private static final int MAX_VARIATIONS = 3;
 
     public QueryTransformationService(OpenAiChatModel chatModel) {
         this.chatModel = chatModel;
@@ -68,17 +68,21 @@ public class QueryTransformationService {
      */
     private String buildTransformationPrompt(String query) {
         return String.format(
-                "Given this user question, generate ONE semantically equivalent reformulation that uses " +
-                        "different wording while preserving the exact same meaning and intent. " +
-                        "The reformulation should help retrieve the same relevant information.\n\n" +
-                        "Original question: %s\n\n" +
-                        "Requirements:\n" +
-                        "1. Preserve all key concepts and technical terms\n" +
-                        "2. Only change phrasing and sentence structure\n" +
-                        "3. Do NOT broaden or narrow the scope\n" +
-                        "4. Do NOT add extra context or examples\n" +
-                        "5. Keep it concise and focused\n\n" +
-                        "Reformulation:",
+                """
+                        Given this user question, generate %d semantically equivalent reformulations that use different wording while preserving the exact same meaning and intent. Each reformulation should help retrieve the same relevant information.
+
+                        Original question: %s
+
+                        Requirements:
+                        1. Preserve all key concepts and technical terms
+                        2. Only change phrasing and sentence structure
+                        3. Do NOT broaden or narrow the scope
+                        4. Do NOT add extra context or examples
+                        5. Keep each reformulation concise and focused
+                        6. Output exactly %d reformulations, one per line
+                        7. Do NOT number them or use bullet points
+
+                        Reformulations:""",
                 MAX_VARIATIONS, query, MAX_VARIATIONS);
     }
 

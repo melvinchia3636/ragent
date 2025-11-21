@@ -202,3 +202,169 @@
 :root.dark-theme .alert-dialog.confirmation .graphic-container .icon * {
   -fx-stroke: -color-text-primary;
 }
+
+/* ============================================
+   MESSAGE DETAILS DIALOG
+   ============================================ */
+.message-details-dialog {
+  -fx-background-color: -color-bg-secondary;
+}
+
+.message-details-dialog .tab-pane {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: transparent;
+}
+
+.message-details-dialog .tab-pane .tab-header-area {
+  -fx-background-color: -color-bg-secondary;
+  -fx-padding: 0 0 0 0;
+}
+
+.message-details-dialog .tab-pane .tab-header-background {
+  -fx-background-color: -color-bg-secondary;
+}
+
+.message-details-dialog .tab-pane .tab {
+  -fx-background-color: -color-bg-secondary;
+  -fx-background-radius: 6 6 0 0;
+  -fx-padding: 10 20;
+  -fx-border-color: transparent transparent -color-border transparent;
+  -fx-border-width: 0 0 2 0;
+}
+
+.message-details-dialog .tab-pane .tab:selected {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: transparent transparent -color-primary transparent;
+  -fx-border-width: 0 0 2 0;
+}
+
+.message-details-dialog .tab-pane .tab .tab-label {
+  -fx-text-fill: -color-text-secondary;
+  -fx-font-size: 14;
+  -fx-font-weight: 500;
+}
+
+.message-details-dialog .tab-pane .tab:selected .tab-label {
+  -fx-text-fill: -color-text-primary;
+  -fx-font-weight: 600;
+}
+
+.message-details-dialog .tab-pane .tab-content-area {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
+}
+
+.message-details-dialog .scroll-pane {
+  -fx-background-color: -color-bg-secondary;
+  -fx-background: -color-bg-secondary;
+  -fx-border-color: transparent;
+}
+
+.message-details-dialog .scroll-pane .viewport {
+  -fx-background-color: -color-bg-secondary;
+}
+
+.message-details-dialog .scroll-pane .content {
+  -fx-background-color: -color-bg-secondary;
+}
+
+/* Context Container */
+.context-container,
+.variations-container {
+  -fx-background-color: -color-bg-secondary;
+}
+
+.context-card {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-radius: 8;
+  -fx-padding: 16;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 8;
+}
+
+.context-index {
+  -fx-font-size: 12;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-secondary;
+  -fx-min-width: 30;
+}
+
+.context-file {
+  -fx-font-size: 14;
+  -fx-font-weight: 600;
+  -fx-text-fill: -color-text-primary;
+}
+
+.context-score {
+  -fx-font-size: 12;
+  -fx-font-weight: 500;
+  -fx-text-fill: -color-text-secondary;
+  -fx-background-color: -color-bg-tertiary;
+  -fx-background-radius: 4;
+  -fx-padding: 4 8;
+}
+
+.context-chunk {
+  -fx-font-size: 13;
+  -fx-fill: -color-text-primary;
+  -fx-line-spacing: 2;
+}
+
+.context-path {
+  -fx-font-size: 11;
+  -fx-text-fill: -color-text-muted;
+  -fx-font-family: monospace;
+}
+
+/* Variation Card */
+.variation-card {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-radius: 8;
+  -fx-padding: 12;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 8;
+}
+
+.variation-index {
+  -fx-font-size: 12;
+  -fx-font-weight: 600;
+  -fx-text-fill: -color-text-secondary;
+}
+
+.variation-badge {
+  -fx-font-size: 10;
+  -fx-font-weight: 600;
+  -fx-text-fill: -color-primary;
+  -fx-background-color: rgba(138, 180, 248, 0.15);
+  -fx-background-radius: 4;
+  -fx-padding: 2 6;
+}
+
+:root.dark-theme .variation-badge {
+  -fx-background-color: rgba(138, 180, 248, 0.2);
+}
+
+.variation-text {
+  -fx-font-size: 14;
+  -fx-fill: -color-text-primary;
+  -fx-line-spacing: 2;
+  -fx-padding: 8 0 0 0;
+}
+
+/* Empty State */
+.empty-state-message {
+  -fx-font-size: 14;
+  -fx-text-fill: -color-text-secondary;
+  -fx-padding: 40 20;
+  -fx-alignment: center;
+}
+
+/* Dialog Buttons */
+.dialog-buttons {
+  -fx-background-color: -color-bg-secondary;
+  -fx-border-color: -color-border transparent transparent transparent;
+  -fx-border-width: 1 0 0 0;
+}

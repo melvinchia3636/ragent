@@ -1,7 +1,11 @@
 package dev.ragent.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,125 +14,183 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 
 /**
- * Service for re-ranking search results to improve relevance
- * Implements hybrid scoring combining semantic and lexical matching
+ * Service for re-ranking search results using RRF + MMR diversity
+ * Implements Reciprocal Rank Fusion and Maximal Marginal Relevance
  */
 public class RerankingService {
 
     private static final Logger logger = LogManager.getLogger(RerankingService.class);
 
+    // RRF (Reciprocal Rank Fusion) constant
+    private static final int RRF_K = 60;
+
+    // MMR (Maximal Marginal Relevance) parameters
+    private static final double MMR_LAMBDA = 0.85; // Increased relevance weight (was 0.7)
+    private static final int MMR_LIMIT = 10; // Maximum results after diversity filtering
+
+    // Weight for combining embedding score with RRF score
+    private static final double EMBEDDING_WEIGHT = 0.6; // 60% embedding similarity
+    private static final double RRF_WEIGHT = 0.4; // 40% rank position
+
     /**
-     * Re-rank results using hybrid scoring approach
-     * Combines embedding similarity, term frequency, position, and exact matching
+     * Re-rank results using RRF (Reciprocal Rank Fusion) + MMR (Maximal Marginal
+     * Relevance)
      * 
-     * @param query   The user query
+     * This implementation:
+     * 1. Combines original embedding similarity scores with RRF position-based
+     * scoring
+     * 2. Applies MMR to diversify results and reduce redundancy
+     * 
+     * @param query   The user query (used for logging, diversity based on content
+     *                similarity)
      * @param results The initial search results from embedding store
-     * @return Re-ranked list of results sorted by relevance
+     * @return Re-ranked and diversified list of results
      */
     public List<EmbeddingMatch<TextSegment>> rerank(String query, List<EmbeddingMatch<TextSegment>> results) {
         if (results.isEmpty()) {
             return results;
         }
 
-        // Tokenize query
-        String[] queryTokens = tokenize(query.toLowerCase());
+        logger.debug("Re-ranking {} results using combined scoring + MMR", results.size());
 
-        // Calculate re-ranking scores
-        List<ScoredMatch> scoredMatches = new ArrayList<>();
-        for (EmbeddingMatch<TextSegment> match : results) {
-            String text = match.embedded().text().toLowerCase();
-            double rerankScore = calculateRerankScore(queryTokens, text, match.score());
-            scoredMatches.add(new ScoredMatch(match, rerankScore));
+        // Step 1: Combine embedding similarity scores with RRF position-based scoring
+        List<ScoredMatch> combinedScored = new ArrayList<>();
+
+        // Normalize embedding scores to 0-1 range
+        double maxEmbeddingScore = results.stream()
+                .mapToDouble(EmbeddingMatch::score)
+                .max()
+                .orElse(1.0);
+
+        for (int i = 0; i < results.size(); i++) {
+            EmbeddingMatch<TextSegment> match = results.get(i);
+
+            // Normalize embedding score
+            double normalizedEmbeddingScore = match.score() / maxEmbeddingScore;
+
+            // RRF formula: 1 / (k + rank)
+            double rrfScore = 1.0 / (RRF_K + i + 1.0);
+
+            // Normalize RRF score to 0-1 range
+            double maxRRF = 1.0 / (RRF_K + 1.0);
+            double normalizedRRFScore = rrfScore / maxRRF;
+
+            // Combine both scores with weights
+            double combinedScore = (EMBEDDING_WEIGHT * normalizedEmbeddingScore) +
+                    (RRF_WEIGHT * normalizedRRFScore);
+
+            combinedScored.add(new ScoredMatch(match, combinedScore));
+
+            logger.trace("Result {}: embedding={}, rrf={}, combined={}",
+                    i + 1, normalizedEmbeddingScore, normalizedRRFScore, combinedScore);
         }
 
-        // Sort by re-rank score (descending)
-        scoredMatches.sort((a, b) -> Double.compare(b.score, a.score));
+        // Sort by combined score (descending)
+        combinedScored.sort((a, b) -> Double.compare(b.score, a.score));
+
+        logger.debug("Combined scoring complete, top score: {}",
+                combinedScored.isEmpty() ? 0 : combinedScored.get(0).score);
+
+        // Step 2: Apply MMR for diversity
+        List<EmbeddingMatch<TextSegment>> diversified = applyMMR(combinedScored, MMR_LAMBDA,
+                Math.min(MMR_LIMIT, combinedScored.size()));
+
+        logger.debug("MMR diversification complete: {} results (from {} candidates)",
+                diversified.size(), combinedScored.size());
+
+        return diversified;
+    }
+
+    /**
+     * Apply Maximal Marginal Relevance (MMR) to promote diversity
+     * 
+     * MMR Formula: λ × relevance - (1-λ) × max_redundancy
+     * 
+     * @param candidates List of scored candidates
+     * @param lambda     Balance between relevance and diversity (0.0 = max
+     *                   diversity, 1.0 = max relevance)
+     * @param limit      Maximum number of results to return
+     * @return Diversified list of results
+     */
+    private List<EmbeddingMatch<TextSegment>> applyMMR(List<ScoredMatch> candidates, double lambda, int limit) {
+        List<ScoredMatch> selected = new ArrayList<>();
+        List<ScoredMatch> remaining = new ArrayList<>(candidates);
+
+        while (selected.size() < limit && !remaining.isEmpty()) {
+            ScoredMatch best = null;
+            double bestMMRScore = Double.NEGATIVE_INFINITY;
+
+            for (ScoredMatch candidate : remaining) {
+                double relevance = candidate.score;
+
+                // Calculate maximum redundancy with already selected items
+                double maxRedundancy = 0.0;
+                for (ScoredMatch selectedItem : selected) {
+                    double redundancy = calculateTokenOverlap(
+                            candidate.match.embedded().text(),
+                            selectedItem.match.embedded().text());
+                    maxRedundancy = Math.max(maxRedundancy, redundancy);
+                }
+
+                // MMR score: balance relevance and diversity
+                double mmrScore = lambda * relevance - (1.0 - lambda) * maxRedundancy;
+
+                if (mmrScore > bestMMRScore) {
+                    bestMMRScore = mmrScore;
+                    best = candidate;
+                }
+            }
+
+            if (best != null) {
+                selected.add(best);
+                remaining.remove(best);
+            }
+        }
 
         // Convert back to EmbeddingMatch list
-        List<EmbeddingMatch<TextSegment>> reranked = new ArrayList<>();
-        for (ScoredMatch scored : scoredMatches) {
-            reranked.add(scored.match);
-        }
-
-        logger.debug("Re-ranked {} results", reranked.size());
-        return reranked;
+        return selected.stream()
+                .map(scored -> scored.match)
+                .collect(Collectors.toList());
     }
 
     /**
-     * Calculate re-ranking score based on multiple signals:
-     * - Original embedding similarity score (60% weight)
-     * - Term frequency (TF) overlap (30% weight)
-     * - Position-based scoring (5% weight) - earlier matches score higher
-     * - Exact phrase matching bonus (5% weight)
+     * Calculate token overlap between two text segments
+     * Returns a normalized score (0.0 to 1.0) representing similarity
      * 
-     * @param queryTokens    Tokenized query terms
-     * @param text           The document text to score
-     * @param embeddingScore Original embedding similarity score
-     * @return Combined re-ranking score
+     * @param text1 First text segment
+     * @param text2 Second text segment
+     * @return Overlap score (0.0 = no overlap, 1.0 = complete overlap)
      */
-    private double calculateRerankScore(String[] queryTokens, String text, double embeddingScore) {
-        double score = embeddingScore * 0.6; // Base score from embedding similarity
+    private double calculateTokenOverlap(String text1, String text2) {
+        Set<String> tokens1 = tokenize(text1);
+        Set<String> tokens2 = tokenize(text2);
 
-        String[] textTokens = tokenize(text);
-
-        // Term frequency scoring
-        int matchCount = 0;
-        int totalQueryTerms = queryTokens.length;
-        for (String queryToken : queryTokens) {
-            for (String textToken : textTokens) {
-                if (textToken.equals(queryToken)) {
-                    matchCount++;
-                    break;
-                }
-            }
-        }
-        double tfScore = totalQueryTerms > 0 ? (double) matchCount / totalQueryTerms : 0;
-        score += tfScore * 0.3;
-
-        // Position-based scoring (earlier appearance = higher relevance)
-        int firstMatchPosition = findFirstMatchPosition(queryTokens, textTokens);
-        if (firstMatchPosition >= 0) {
-            double positionScore = 1.0 / (1.0 + Math.log(firstMatchPosition + 1));
-            score += positionScore * 0.05;
+        if (tokens1.isEmpty() || tokens2.isEmpty()) {
+            return 0.0;
         }
 
-        // Exact phrase matching bonus
-        String queryPhrase = String.join(" ", queryTokens);
-        if (text.contains(queryPhrase)) {
-            score += 0.05;
-        }
+        // Calculate intersection
+        Set<String> intersection = new HashSet<>(tokens1);
+        intersection.retainAll(tokens2);
 
-        return score;
+        // Normalize by the smaller set size (Jaccard-like similarity)
+        int minSize = Math.min(tokens1.size(), tokens2.size());
+        return (double) intersection.size() / minSize;
     }
 
     /**
-     * Tokenize text into words (simple whitespace and punctuation split)
+     * Tokenize text into unique words (simple whitespace and punctuation split)
      * 
      * @param text Text to tokenize
-     * @return Array of tokens
+     * @return Set of unique tokens
      */
-    private String[] tokenize(String text) {
-        return text.replaceAll("[^a-zA-Z0-9\\s]", " ")
+    private Set<String> tokenize(String text) {
+        return Arrays.stream(text.toLowerCase()
+                .replaceAll("[^a-zA-Z0-9\\s]", " ")
                 .trim()
-                .split("\\s+");
-    }
-
-    /**
-     * Find the position of the first query token match in text
-     * 
-     * @param queryTokens Query tokens to search for
-     * @param textTokens  Text tokens to search in
-     * @return Position of first match, or -1 if no match
-     */
-    private int findFirstMatchPosition(String[] queryTokens, String[] textTokens) {
-        for (int i = 0; i < textTokens.length; i++) {
-            for (String queryToken : queryTokens) {
-                if (textTokens[i].equals(queryToken)) {
-                    return i;
-                }
-            }
-        }
-        return -1;
+                .split("\\s+"))
+                .filter(token -> !token.isEmpty())
+                .collect(Collectors.toSet());
     }
 
     /**

@@ -94,7 +94,13 @@ public class MessageHandler {
         DatabaseService databaseService = DatabaseService.getInstance();
         if (databaseService != null) {
             databaseService.deleteMessagesAfter(currentSession.getId(), aiMessage.getTimestamp());
-            logger.info("Deleted messages after timestamp: {}", aiMessage.getTimestamp());
+        }
+
+        // Reload session history from database to ensure old context is not retained
+        RAGService ragService = sessionStateHandler.getRagService();
+        if (ragService != null) {
+            ragService.reloadSessionHistory();
+            logger.info("Reloaded session history after regeneration");
         }
 
         // Remove all UI messages after (and including) the AI message
@@ -223,7 +229,9 @@ public class MessageHandler {
                     }
 
                     @Override
-                    public void onComplete(String fullResponse) {
+                    public void onComplete(String fullResponse,
+                            java.util.List<dev.ragent.model.ContextReference> contextReferences,
+                            java.util.List<String> queryVariations) {
                         Platform.runLater(() -> {
                             // Update final message
                             aiMessageBox.updateText(fullResponse);
@@ -235,11 +243,30 @@ public class MessageHandler {
                                 aiMessageBox.setTopLabel("Referenced from: " + sourcesText);
                             }
 
-                            // Create final AI message with sources and save to database
-                            ChatMessage finalAiMessage = new ChatMessage(fullResponse, false, sourcesText);
+                            // Update the existing ChatMessage object with context data
+                            aiChatMessage.setContextReferences(contextReferences);
+                            aiChatMessage.setQueryVariations(queryVariations);
+
+                            // Save to database (use the existing message ID from aiChatMessage)
                             DatabaseService databaseService = DatabaseService.getInstance();
                             if (databaseService != null) {
-                                databaseService.saveChatMessage(currentSession.getId(), finalAiMessage);
+                                // Create a message with the same ID for database save
+                                ChatMessage messageToSave = new ChatMessage(
+                                        aiChatMessage.getId(),
+                                        fullResponse,
+                                        false,
+                                        aiChatMessage.getTimestamp(),
+                                        sourcesText);
+                                databaseService.saveChatMessage(currentSession.getId(), messageToSave);
+
+                                // Save context references and query variations
+                                databaseService.saveMessageContexts(aiChatMessage.getId(), contextReferences);
+                                databaseService.saveQueryVariations(aiChatMessage.getId(), queryVariations);
+
+                                logger.debug("Saved {} context references and {} query variations for message {}",
+                                        contextReferences != null ? contextReferences.size() : 0,
+                                        queryVariations != null ? queryVariations.size() : 0,
+                                        aiChatMessage.getId());
                             }
 
                             // Re-enable all controls and message buttons

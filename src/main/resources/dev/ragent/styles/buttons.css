@@ -5,7 +5,7 @@
 /* Primary Button - Dark background */
 .primary-btn {
   -fx-background-color: -color-bg-dark;
-  -fx-text-fill: -color-text-light;
+  -fx-text-fill: -color-text-light !important;
   -fx-padding: 12;
   -fx-font-weight: bold;
   -fx-background-radius: 4;

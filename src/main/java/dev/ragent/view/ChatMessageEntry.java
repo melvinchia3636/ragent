@@ -68,13 +68,17 @@ public final class ChatMessageEntry extends VBox {
     private void setupActionButtons() {
         ChatMessageEntryActionButtons.ActionButtonData[] actionButtonsData = new ChatMessageEntryActionButtons.ActionButtonData[] {
                 new ChatMessageEntryActionButtons.ActionButtonData(
+                        "tabler--info-circle-small",
+                        e -> this.handleShowDetails(),
+                        !message.isUser()),
+                new ChatMessageEntryActionButtons.ActionButtonData(
                         "tabler--copy",
                         e -> this.handleCopy(e),
                         true),
                 new ChatMessageEntryActionButtons.ActionButtonData(
                         "tabler--refresh",
                         e -> this.handleRegenerate(),
-                        !message.isUser())
+                        !message.isUser()),
         };
 
         ChatMessageEntryActionButtons actionButtons = new ChatMessageEntryActionButtons();
@@ -116,6 +120,15 @@ public final class ChatMessageEntry extends VBox {
         } else {
             AlertHelper.showError("Error", "Cannot regenerate this message. Regeneration callback not set.");
         }
+    }
+
+    private void handleShowDetails() {
+        // Get the parent stage
+        javafx.stage.Stage owner = (javafx.stage.Stage) getScene().getWindow();
+
+        // Create and show the message details dialog
+        MessageDetailsDialog dialog = new MessageDetailsDialog(owner, message);
+        dialog.showAndWait();
     }
 
     private void setupMessageLayout() {

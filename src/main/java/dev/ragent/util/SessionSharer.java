@@ -10,16 +10,12 @@ import dev.ragent.view.SharingProgressDialog;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
@@ -28,8 +24,8 @@ import org.apache.logging.log4j.Logger;
 /**
  * Utility class for sharing chat history to Pastebin
  */
-public class ChatSharer {
-    private static final Logger logger = LogManager.getLogger(ChatSharer.class);
+public class SessionSharer {
+    private static final Logger logger = LogManager.getLogger(SessionSharer.class);
     private static final String PASTEBIN_API_URL = "https://pastebin.com/api/api_post.php";
 
     /**
@@ -71,8 +67,7 @@ public class ChatSharer {
             return;
         }
 
-        // Format the chat content
-        String chatContent = formatChatContent(session, messages);
+        String chatContent = SessionExporter.formatChatContent(session, messages);
 
         // Show progress and upload in background thread
         Platform.runLater(() -> {
@@ -104,40 +99,6 @@ public class ChatSharer {
     }
 
     /**
-     * Format chat content for sharing
-     * 
-     * @param session  the session
-     * @param messages the chat messages
-     * @return formatted chat content
-     */
-    private static String formatChatContent(Session session, List<ChatMessage> messages) {
-        StringBuilder content = new StringBuilder();
-
-        content.append("Chat Export - ").append(session.getName()).append("\n");
-        content.append("Created: ").append(session.getFormattedCreatedAt()).append("\n");
-        content.append("Exported: ")
-                .append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                .append("\n");
-        content.append("Model: ").append(session.getModel()).append("\n");
-        content.append("=".repeat(80)).append("\n\n");
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-        for (ChatMessage message : messages) {
-            String role = message.isUser() ? "USER" : "ASSISTANT";
-            String timestamp = message.getTimestamp().format(formatter);
-            content.append("[").append(timestamp).append("] ").append(role).append(":\n");
-            content.append(message.getContent()).append("\n\n");
-
-            if (!message.isUser() && message.getSources() != null && !message.getSources().isEmpty()) {
-                content.append("Sources: ").append(message.getSources()).append("\n\n");
-            }
-        }
-
-        return content.toString();
-    }
-
-    /**
      * Upload content to Pastebin
      * 
      * @param content the content to upload
@@ -147,12 +108,6 @@ public class ChatSharer {
      * @throws Exception if upload fails
      */
     private static String uploadToPastebin(String content, String title, String apiKey) throws Exception {
-        URL url = new URI(PASTEBIN_API_URL).toURL();
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
         // Build POST parameters
         String postData = "api_dev_key=" + URLEncoder.encode(apiKey, StandardCharsets.UTF_8)
                 + "&api_option=paste"
@@ -161,44 +116,29 @@ public class ChatSharer {
                 + "&api_paste_private=1" // 0=public, 1=unlisted, 2=private
                 + "&api_paste_expire_date=1M"; // Expire after 1 month
 
-        // Send request
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = postData.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        }
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(PASTEBIN_API_URL))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(postData))
+                .build();
 
-        // Read response
-        int responseCode = connection.getResponseCode();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        int responseCode = response.statusCode();
         logger.info("Pastebin API response code: {}", responseCode);
 
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-                StringBuilder response = new StringBuilder();
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-                String pastebinUrl = response.toString();
-                logger.info("Chat shared successfully to Pastebin: {}", pastebinUrl);
-                return pastebinUrl;
-            }
+        if (responseCode == 200) {
+            String pastebinUrl = response.body();
+            logger.info("Chat shared successfully to Pastebin: {}", pastebinUrl);
+            return pastebinUrl;
         } else {
-            // Read error response
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8))) {
-                StringBuilder errorResponse = new StringBuilder();
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    errorResponse.append(responseLine.trim());
-                }
-                logger.error("Pastebin API error response: {}", errorResponse.toString());
-                throw new Exception("Pastebin API error: " + errorResponse.toString());
-            }
+            String errorResponse = response.body();
+            logger.error("Pastebin API error response: {}", errorResponse);
+            throw new Exception("Pastebin API error: " + errorResponse);
         }
     }
 
-    private ChatSharer() {
+    private SessionSharer() {
         // Prevent instantiation
     }
 }

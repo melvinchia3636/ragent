@@ -3,8 +3,8 @@ package dev.ragent.view;
 import dev.ragent.model.Session;
 import dev.ragent.service.APIKeyService;
 import dev.ragent.service.DatabaseService;
-import dev.ragent.util.ChatExporter;
-import dev.ragent.util.ChatSharer;
+import dev.ragent.util.SessionExporter;
+import dev.ragent.util.SessionSharer;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseButton;
@@ -97,11 +97,11 @@ public final class SidebarSessionEntry extends HBox {
     }
 
     private void handleExportChat() {
-        ChatExporter.exportChat(session, (Stage) getScene().getWindow());
+        SessionExporter.exportChat(session, (Stage) getScene().getWindow());
     }
 
     private void handleShareChat() {
-        ChatSharer.shareChat(session, (Stage) getScene().getWindow());
+        SessionSharer.shareChat(session, (Stage) getScene().getWindow());
     }
 
     public void updateStyling(boolean isSelected) {

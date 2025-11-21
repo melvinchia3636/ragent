@@ -20,8 +20,42 @@ import org.apache.logging.log4j.Logger;
 /**
  * Utility class for exporting chat history to text files
  */
-public class ChatExporter {
-    private static final Logger logger = LogManager.getLogger(ChatExporter.class);
+public class SessionExporter {
+    private static final Logger logger = LogManager.getLogger(SessionExporter.class);
+
+    /**
+     * Format chat content for a session
+     * 
+     * @param session  the session
+     * @param messages the chat messages
+     * @return formatted chat content as a string
+     */
+    public static String formatChatContent(Session session, List<ChatMessage> messages) {
+        StringBuilder content = new StringBuilder();
+
+        content.append("RAGent Chat Export - ").append(session.getName()).append("\n");
+        content.append("Created: ").append(session.getFormattedCreatedAt()).append("\n");
+        content.append("Exported: ")
+                .append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy, h.mma")))
+                .append("\n");
+        content.append("Model: ").append(session.getModel()).append("\n");
+        content.append("=".repeat(80)).append("\n\n");
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        for (ChatMessage message : messages) {
+            String role = message.isUser() ? "USER" : "ASSISTANT";
+            String timestamp = message.getTimestamp().format(formatter);
+            content.append("[").append(timestamp).append("] ").append(role).append(":\n");
+            content.append(message.getContent()).append("\n\n");
+
+            if (!message.isUser() && message.getSources() != null && !message.getSources().isEmpty()) {
+                content.append("Sources: ").append(message.getSources()).append("\n\n");
+            }
+        }
+
+        return content.toString();
+    }
 
     /**
      * Export chat history for a session to a text file
@@ -69,26 +103,10 @@ public class ChatExporter {
 
         logger.info("Exporting chat to file: {}", file.getAbsolutePath());
 
+        String chatContent = formatChatContent(session, messages);
+
         try (FileWriter writer = new FileWriter(file)) {
-            writer.write("Chat Export - " + session.getName() + "\n");
-            writer.write("Created: " + session.getFormattedCreatedAt() + "\n");
-            writer.write("Exported: "
-                    + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n");
-            writer.write("Model: " + session.getModel() + "\n");
-            writer.write("=".repeat(80) + "\n\n");
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-            for (ChatMessage message : messages) {
-                String role = message.isUser() ? "USER" : "ASSISTANT";
-                String timestamp = message.getTimestamp().format(formatter);
-                writer.write("[" + timestamp + "] " + role + ":\n");
-                writer.write(message.getContent() + "\n\n");
-
-                if (!message.isUser() && message.getSources() != null && !message.getSources().isEmpty()) {
-                    writer.write("Sources: " + message.getSources() + "\n\n");
-                }
-            }
+            writer.write(chatContent);
 
             logger.info("Chat export completed for session: {}", session.getName());
 
@@ -107,7 +125,7 @@ public class ChatExporter {
         }
     }
 
-    private ChatExporter() {
+    private SessionExporter() {
         // Prevent instantiation
     }
 }

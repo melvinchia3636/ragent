@@ -3,115 +3,11 @@
 #show heading: set block(above: 2em, below: 1.2em);
 = Introduction
 
-Large Language Models (LLMs) such as ChatGPT have demonstrated remarkable capabilities in natural language understanding and generation. However, their effectiveness is constrained by the context window limitations and the absence of domain-specific or up-to-date information during inference. Retrieval-Augmented Generation (RAG) addresses these limitations by integrating external knowledge retrieval mechanisms with generative models.
+In this assignment under the module ITS66704 Advanced Programming, we are required to utilize JavaFX and LangChain4j to implement a desktop knowledge assistance system powered by Retrieval-Augmented Generation (RAG) technology. The system shall be designed to manage files, build knowledge bases, perform semantic searches, and ultimately respond to user queries through an LLM with appropriate contextual information. In essence, the core of this project is to give us the opportunity to build an AI-driven knowledge system of our own—how exciting indeed.
 
-RAG operates on the principle of augmenting the input prompt with relevant contextual information retrieved from a curated knowledge base. This approach enables the model to generate more accurate, contextually grounded, and factually consistent responses. The retrieval process involves querying a document corpus based on semantic similarity to the user's input, followed by the incorporation of the most relevant passages into the prompt provided to the LLM.
+This report, however, while still maintaining a reasonably formal structure, partially serves as the documentation for a real, functioning codebase. As a result, its tone will be less academically rigid and more aligned with modern engineering documentation—clear, direct, and grounded in practical implementation details. Advanced Programming, being a module that emphasizes practicality above all, should value principles such as “making things work, keeping the logic clear, and ensuring that the design supports the functional requirements” rather than relying solely on meticulously crafted wording that exists only on paper.
 
-This project presents an implementation of a RAG system featuring a JavaFX-based graphical user interface for knowledge base management. The system provides functionality for resource ingestion, organization, and retrieval, enabling users to maintain a structured repository of documents and articles. Upon receiving a query, the system employs semantic search techniques to identify relevant documents from the knowledge base, which are subsequently utilized to augment the LLM prompt.
-
-The implementation incorporates advanced techniques including response streaming, multisource retrieval, context chaining, and re-ranking mechanisms. The subsequent sections detail the architectural design, implementation methodology, and evaluation of the proposed RAG system.
-
-= Problem Definition & Objectives
-
-== Problem Definition
-
-Traditional Large Language Models (LLMs) face several critical limitations when deployed in practical applications. First, they are constrained by fixed training data cutoffs, making them unable to access information beyond their training period. Second, their context window limitations restrict the amount of information that can be processed in a single query. Third, they lack domain-specific knowledge that may be proprietary or specialized to particular organizations or fields of study.
-
-These limitations manifest as several concrete problems:
-- *Hallucination*: LLMs may generate plausible-sounding but factually incorrect information when queried about topics outside their training data
-- *Lack of Source Attribution*: Users cannot verify the factual basis of generated responses
-- *Inability to Access Private Data*: Organizations cannot leverage LLMs with their internal documentation and knowledge bases
-- *Static Knowledge*: Models cannot be updated with new information without expensive retraining
-
-The problem is particularly acute in educational settings where students need to query course materials, lecture notes, and academic resources. A typical scenario involves a student wanting to ask questions about their course content, but generic LLMs cannot access these specific materials, leading to irrelevant or incorrect responses.
-
-== Purpose & Objectives
-
-The primary purpose of this project is to develop a Retrieval-Augmented Generation (RAG) system that addresses the aforementioned limitations by combining the generative capabilities of LLMs with dynamic knowledge retrieval mechanisms.
-
-*Primary Objectives:*
-
-1. *Knowledge Base Management*: Enable users to create, organize, and manage multiple knowledge bases (sessions) containing documents relevant to specific topics or courses
-2. *Semantic Document Retrieval*: Implement vector-based semantic search to retrieve contextually relevant document segments based on user queries
-3. *Context-Aware Query Processing*: Maintain session history to handle follow-up questions and contextual references
-4. *Response Re-ranking*: Improve retrieval quality through hybrid scoring that combines semantic similarity with lexical matching
-5. *Source Attribution*: Provide transparent citations of source documents used in generating responses
-6. *Multi-Model Support*: Allow users to select from different OpenAI models (GPT-4o, GPT-4.1, GPT-5 series) based on their requirements
-
-*Secondary Objectives:*
-
-1. Provide an intuitive JavaFX-based graphical interface for non-technical users
-2. Implement persistent storage for session history and embeddings to reduce computational overhead
-3. Support multiple document formats (PDF, TXT, DOC, DOCX, PPT, PPTX)
-4. Enable session-based organization for managing different knowledge domains
-5. Implement efficient caching mechanisms to minimize API costs and latency
-
-== Targeted Users
-
-The system is designed for the following user groups:
-*Primary Users:*
-
-- *Students*: Individuals who need to query course materials, lecture notes, and academic resources for studying and assignment completion
-- *Researchers*: Academics who want to ask questions about research papers and technical documentation
-- *Knowledge Workers*: Professionals who need to reference internal documentation, policies, and procedures
-
-*Secondary Users:*
-
-- *Educators*: Teachers who want to create knowledge bases from course materials for student access
-- *Content Curators*: Individuals responsible for organizing and maintaining organizational knowledge repositories
-
-*User Characteristics:*
-
-- May have limited technical expertise in AI/ML
-- Require intuitive interfaces for document management
-- Need reliable, cited responses rather than speculative answers
-- Work with domain-specific or proprietary information not available to public LLMs
-
-== System Scope
-
-The implemented RAG system encompasses the following functional scope:
-
-*Included Features:*
-1. *Session Management*:
-  - Create multiple independent knowledge bases (sessions)
-  - Edit session names and associated AI models
-  - Delete sessions with confirmation safeguards
-  - Persistent storage of session metadata
-
-2. *Knowledge Base Management*:
-  - Import documents in multiple formats (PDF, TXT, DOC, DOCX, PPT, PPTX)
-  - View document content before import
-  - Replace existing documents with updated versions
-  - Remove documents from knowledge bases
-  - Automatic text extraction and preprocessing
-
-3. *Intelligent Query Processing*:
-  - Semantic search using OpenAI embeddings (text-embedding-3-small)
-  - Session-aware query contextualization
-  - Hybrid re-ranking combining semantic and lexical signals
-  - Retrieval of top-5 most relevant document segments
-  - Source attribution for transparency
-
-4. *Sessional Interface*:
-  - Multi-turn session support with context retention
-  - Session history persistence across sessions
-  - Clear session functionality
-  - Real-time response generation with loading indicators
-  - Display of source documents for each response
-
-5. *Performance Optimization*:
-  - Embedding caching to avoid redundant API calls
-  - Incremental indexing (only process new/modified files)
-  - Session-isolated embedding stores for memory efficiency
-
-The following features are out of scope for the current implementation:
-
-- Web-based deployment (desktop application only)
-- Multi-user collaboration features
-- Document editing capabilities within the application
-- Support for non-textual documents (images, audio, video)
-- Custom embedding model training
-- Integration with databases or enterprise systems
+Throughout the development of this assignment, instead of following the traditional workflow of completing a full specification document before implementation, we intentionally adopted the reverse approach. Rather than using the conventional waterfall model—where detailed requirements and design specifications are drafted before any actual coding, we embraced a more agile and iterative strategy. The process began with constructing a minimum viable product (MVP) containing essential working features. From there, we continued to expand the system with new functionalities, refactor the codebase, perform optimizations, validate design decisions through real running behaviour, and only then proceed to produce the documentation that reflects the final, working system.
 
 = Requirement Specifications
 
@@ -124,6 +20,9 @@ This section delineates the comprehensive functional and non-functional requirem
 *FR1.1 - Session Creation*
 
 - The system shall allow users to create new sessions with user-defined names
+- The system shall allow users to select an AI model from a predefined list
+- The system shall allow duplicate session names
+- The system shall allow users to define session parameters including temperature and top K results, and whether to enable query transformation
 - Each session shall be assigned a unique identifier upon creation
 - New sessions shall default to the GPT-4o-mini model
 - Session creation shall initialize an empty knowledge base and session history
@@ -137,10 +36,10 @@ This section delineates the comprehensive functional and non-functional requirem
 
 *FR1.3 - Session Editing*
 
-- Users shall be able to edit session names through a dialog interface
+- Users shall be able to edit session configurations through a dialog interface
 - Users shall be able to change the AI model associated with a session
-- The system shall provide selection from eight OpenAI models: gpt-4o-mini, gpt-4o, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-5, gpt-5-mini, gpt-5-nano
-- Model changes shall trigger reinitialization of the RAG service
+- Users shall be able to modify session parameters including temperature, top K results, and query transformation settings
+- Parameter changes shall trigger reinitialization of the RAG service
 - Changes shall be persisted to the database immediately
 
 *FR1.4 - Session Deletion*
@@ -148,7 +47,46 @@ This section delineates the comprehensive functional and non-functional requirem
 - The system shall provide a delete function for sessions
 - Deletion shall require explicit user confirmation via dialog
 - Deleting a session shall cascade delete all associated messages and embeddings
-- The system shall prevent deletion of the currently selected session without warning
+
+*FR1.5 - Session Clearing*
+
+- Users shall be able to clear all messages in the current session
+- Clearing shall require explicit confirmation via dialog
+- The operation shall delete messages from the database and remove them from the UI
+- The RAG service's internal session history shall be reset
+- The knowledge base shall remain intact
+
+*FR1.6 - Session History Display*
+
+- The system shall display session history in a scrollable chat interface
+- User messages shall be visually distinguished from AI responses
+- Each message shall include appropriate styling and alignment
+
+*FR1.7 - Session Persistence*
+
+- All messages (user and AI) shall be saved to the database with timestamps
+- Session history shall be automatically loaded when a session is selected
+- The system shall restore the complete session state from the database
+
+*FR1.8 - Session Exporting*
+
+- Users shall be able to export session history to a text file
+- A file chooser dialog shall allow users to specify the export location and filename
+- A default filename shall be suggested based on the session name and timestamp
+- The exported file shall include session metadata (session name, creation date, model, export date)
+- The exported file shall include all messages in chronological order
+- The export function shall be accessible via a context menu in the session sidebar
+- The system shall prevent exporting if there are no messages in the session
+- A confirmation dialog shall inform users of successful export and file location
+
+*FR1.9 - Session Sharing*
+
+- Users shall be able to share session history via Pastebin
+- Sharing shall require a valid Pastebin API key configured in the system
+- The shared content shall include session metadata and all messages
+- The system shall display progress and success dialogs during sharing
+- Upon successful upload, the system shall provide the Pastebin URL for copying
+- Sharing shall be accessible via a context menu in the session sidebar
 
 === FR2: Knowledge Base Management
 
@@ -223,34 +161,6 @@ This section delineates the comprehensive functional and non-functional requirem
 - Each response shall include citations of source documents used
 - Citations shall display the document filename
 - Users shall be able to identify which documents contributed to the response
-
-=== FR4: Session Management
-
-*FR4.1 - Session History Display*
-
-- The system shall display session history in a scrollable chat interface
-- User messages shall be visually distinguished from AI responses
-- Each message shall include appropriate styling and alignment
-
-*FR4.2 - Session Persistence*
-
-- All messages (user and AI) shall be saved to the database with timestamps
-- Session history shall be automatically loaded when a session is selected
-- The system shall restore the complete session state from the database
-
-*FR4.3 - Session Clearing*
-
-- Users shall be able to clear all messages in the current session
-- Clearing shall require explicit confirmation via dialog
-- The operation shall delete messages from the database and remove them from the UI
-- The RAG service's internal session history shall be reset
-- The knowledge base shall remain intact
-
-*FR4.4 - Context Chaining*
-
-- The system shall maintain a clean session history without embedded RAG context
-- RAG context shall be injected only into the current query for generation
-- Subsequent queries shall reference the clean session history
 
 === FR5: User Interface Controls
 

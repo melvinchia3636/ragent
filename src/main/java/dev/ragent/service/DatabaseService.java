@@ -74,9 +74,28 @@ public class DatabaseService {
                 "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE" +
                 ")";
 
+        String createMessageContextsTable = "CREATE TABLE IF NOT EXISTS message_contexts (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "message_id TEXT NOT NULL, " +
+                "file_path TEXT NOT NULL, " +
+                "chunk_text TEXT NOT NULL, " +
+                "score REAL NOT NULL, " +
+                "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE" +
+                ")";
+
+        String createQueryVariationsTable = "CREATE TABLE IF NOT EXISTS message_query_variations (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "message_id TEXT NOT NULL, " +
+                "variation_text TEXT NOT NULL, " +
+                "variation_order INTEGER NOT NULL, " +
+                "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE" +
+                ")";
+
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createSessionsTable);
             stmt.execute(createMessagesTable);
+            stmt.execute(createMessageContextsTable);
+            stmt.execute(createQueryVariationsTable);
 
             // Add columns if they don't exist (for existing databases)
             try {
@@ -321,6 +340,102 @@ public class DatabaseService {
             logger.error("Failed to delete messages after timestamp", e);
             throw new RuntimeException("Failed to delete messages after timestamp", e);
         }
+    }
+
+    /**
+     * Save context references for a message
+     */
+    public void saveMessageContexts(String messageId, List<dev.ragent.model.ContextReference> contexts) {
+        if (contexts == null || contexts.isEmpty()) {
+            return;
+        }
+
+        String sql = "INSERT INTO message_contexts (message_id, file_path, chunk_text, score) VALUES (?, ?, ?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            for (dev.ragent.model.ContextReference context : contexts) {
+                pstmt.setString(1, messageId);
+                pstmt.setString(2, context.getFilePath());
+                pstmt.setString(3, context.getChunkText());
+                pstmt.setDouble(4, context.getScore());
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            logger.debug("Saved {} context references for message {}", contexts.size(), messageId);
+        } catch (SQLException e) {
+            logger.error("Failed to save message contexts", e);
+        }
+    }
+
+    /**
+     * Save query variations for a message
+     */
+    public void saveQueryVariations(String messageId, List<String> variations) {
+        if (variations == null || variations.isEmpty()) {
+            return;
+        }
+
+        String sql = "INSERT INTO message_query_variations (message_id, variation_text, variation_order) VALUES (?, ?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            for (int i = 0; i < variations.size(); i++) {
+                pstmt.setString(1, messageId);
+                pstmt.setString(2, variations.get(i));
+                pstmt.setInt(3, i);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            logger.debug("Saved {} query variations for message {}", variations.size(), messageId);
+        } catch (SQLException e) {
+            logger.error("Failed to save query variations", e);
+        }
+    }
+
+    /**
+     * Get context references for a message
+     */
+    public List<dev.ragent.model.ContextReference> getMessageContexts(String messageId) {
+        List<dev.ragent.model.ContextReference> contexts = new ArrayList<>();
+        String sql = "SELECT file_path, chunk_text, score FROM message_contexts WHERE message_id = ? ORDER BY score DESC";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, messageId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                String filePath = rs.getString("file_path");
+                String chunkText = rs.getString("chunk_text");
+                double score = rs.getDouble("score");
+                contexts.add(new dev.ragent.model.ContextReference(filePath, chunkText, score));
+            }
+            logger.debug("Loaded {} context references for message {}", contexts.size(), messageId);
+        } catch (SQLException e) {
+            logger.error("Failed to get message contexts", e);
+        }
+
+        return contexts;
+    }
+
+    /**
+     * Get query variations for a message
+     */
+    public List<String> getQueryVariations(String messageId) {
+        List<String> variations = new ArrayList<>();
+        String sql = "SELECT variation_text FROM message_query_variations WHERE message_id = ? ORDER BY variation_order";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, messageId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                variations.add(rs.getString("variation_text"));
+            }
+            logger.debug("Loaded {} query variations for message {}", variations.size(), messageId);
+        } catch (SQLException e) {
+            logger.error("Failed to get query variations", e);
+        }
+
+        return variations;
     }
 
     /**

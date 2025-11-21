@@ -196,7 +196,8 @@ public class RAGService {
 
         void onNext(String token);
 
-        void onComplete(String fullResponse);
+        void onComplete(String fullResponse, List<dev.ragent.model.ContextReference> contextReferences,
+                List<String> queryVariations);
 
         void onError(Throwable error);
     }
@@ -295,14 +296,31 @@ public class RAGService {
                     .collect(Collectors.toList());
             logger.info("Re-ranking complete: keeping top {} of {} segments", rerankedSegments.size(), beforeLimit);
 
-            // Extract unique source files
+            // Extract unique source files and build context references
             Set<String> sourceFiles = new HashSet<>();
+            List<dev.ragent.model.ContextReference> contextReferences = new ArrayList<>();
             for (EmbeddingMatch<TextSegment> match : rerankedSegments) {
                 TextSegment segment = match.embedded();
-                if (segment.metadata() != null && segment.metadata().containsKey("fileName")) {
-                    String fileName = segment.metadata().getString("fileName");
-                    sourceFiles.add(fileName);
+                String fileName = "Unknown";
+                String filePath = "Unknown";
+
+                if (segment.metadata() != null) {
+                    if (segment.metadata().containsKey("fileName")) {
+                        fileName = segment.metadata().getString("fileName");
+                        sourceFiles.add(fileName);
+                    }
+                    if (segment.metadata().containsKey("filePath")) {
+                        filePath = segment.metadata().getString("filePath");
+                    } else {
+                        filePath = fileName;
+                    }
                 }
+
+                // Create context reference
+                contextReferences.add(new dev.ragent.model.ContextReference(
+                        filePath,
+                        segment.text(),
+                        match.score()));
             }
             logger.info("Sources: {} segments from {} files: {}",
                     rerankedSegments.size(), sourceFiles.size(), sourceFiles);
@@ -352,6 +370,10 @@ public class RAGService {
 
             logger.info("Initiating streaming chat with model: {}", modelName);
 
+            // Store for callback
+            final List<dev.ragent.model.ContextReference> finalContextRefs = contextReferences;
+            final List<String> finalQueryVariations = queryVariations;
+
             // Stream the response
             StringBuilder fullResponse = new StringBuilder();
 
@@ -369,7 +391,7 @@ public class RAGService {
                     logger.info("Response complete: {} characters, session history now has {} messages",
                             responseText.length(), sessionHistory.size());
                     logger.info("========== Streaming Query Complete ==========");
-                    callback.onComplete(responseText);
+                    callback.onComplete(responseText, finalContextRefs, finalQueryVariations);
                 }
 
                 @Override
@@ -401,6 +423,18 @@ public class RAGService {
     }
 
     /**
+     * Reload session history from database
+     * This should be called after database messages are deleted to ensure
+     * consistency
+     */
+    public void reloadSessionHistory() {
+        clearHistory();
+        loadSessionHistory();
+        logger.info("Reloaded session history from database: {} messages", sessionHistory.size() - 1); // -1 for system
+                                                                                                       // message
+    }
+
+    /**
      * Build a contextualized query by incorporating recent session history
      * This helps with follow-up questions like "How about that?" or "Tell me more"
      * 
@@ -421,7 +455,8 @@ public class RAGService {
         for (int i = startIdx; i < sessionHistory.size(); i++) {
             ChatMessage msg = sessionHistory.get(i);
             switch (msg) {
-                case UserMessage userMsg -> contextBuilder.append("User asked: ").append(userMsg.singleText()).append(" ");
+                case UserMessage userMsg ->
+                    contextBuilder.append("User asked: ").append(userMsg.singleText()).append(" ");
                 case AiMessage aiMsg -> {
                     // Include a brief snippet of AI response for context
                     String aiText = aiMsg.text();
