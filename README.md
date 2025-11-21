@@ -17,13 +17,15 @@ RAGent combines the power of AI language models with intelligent document retrie
 - **🎯 Smart Reranking** - Combines embedding similarity with RRF and MMR for optimal results
 - **💬 Contextual Chat** - Maintains conversation history for coherent multi-turn dialogues
 - **📊 Message Details** - View context references and query variations for each response
-- **🎨 Modern UI** - Clean, dark-mode enabled interface built with JavaFX
+- **🎨 Modern UI** - Clean, dark-mode togglable interface built with JavaFX
 - **🔌 Multi-Provider Support** - Works with OpenAI, Groq, and other LLM providers
 - **⚙️ Customizable** - Adjust temperature, top-k, and enable/disable query transformation
 
 ## 🖥 Screenshots
 
-[Add your screenshots here]
+<img width="48%" alt="image" src="https://github.com/user-attachments/assets/36d18ab0-1cf2-4a52-9639-c2bbb4030ba7" />
+<img width="48%" alt="image" src="https://github.com/user-attachments/assets/e5725ebf-c1d9-4b2e-812c-3f8ce8ea6882" />
+
 
 ## 🔬 Technologies Used
 
