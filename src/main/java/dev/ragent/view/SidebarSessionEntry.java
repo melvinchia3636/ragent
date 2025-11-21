@@ -1,7 +1,10 @@
 package dev.ragent.view;
 
 import dev.ragent.model.Session;
+import dev.ragent.service.APIKeyService;
 import dev.ragent.service.DatabaseService;
+import dev.ragent.util.ChatExporter;
+import dev.ragent.util.ChatSharer;
 import dev.ragent.util.Icon;
 import javafx.geometry.Pos;
 import javafx.scene.control.ContentDisplay;
@@ -72,12 +75,27 @@ public final class SidebarSessionEntry extends HBox {
         renameItem.setGraphic(Icon.load("tabler--pencil.svg"));
         renameItem.setOnAction(e -> handleEdit());
 
+        MenuItem exportItem = new MenuItem("Export Chat");
+        exportItem.setGraphic(Icon.load("tabler--file-export.svg"));
+        exportItem.setOnAction(e -> handleExportChat());
+
+        menuButton.getItems().addAll(renameItem, exportItem);
+
+        // Add Share Chat menu item only if Pastebin API key is available
+        APIKeyService apiKeyService = APIKeyService.getInstance();
+        if (apiKeyService != null && apiKeyService.hasPastebinApiKey()) {
+            MenuItem shareItem = new MenuItem("Share Chat");
+            shareItem.setGraphic(Icon.load("tabler--share.svg"));
+            shareItem.setOnAction(e -> handleShareChat());
+            menuButton.getItems().addAll(shareItem);
+        }
+
         MenuItem deleteItem = new MenuItem("Delete");
         deleteItem.getStyleClass().add("dangerous");
         deleteItem.setGraphic(Icon.load("tabler--trash-x.svg"));
         deleteItem.setOnAction(e -> handleDelete());
 
-        menuButton.getItems().addAll(renameItem, deleteItem);
+        menuButton.getItems().add(deleteItem);
 
         return menuButton;
     }
@@ -86,14 +104,9 @@ public final class SidebarSessionEntry extends HBox {
         EditSessionDialog dialog = new EditSessionDialog(session, (Stage) getScene().getWindow());
 
         if (dialog.showAndWaitForResult()) {
-            System.out.println("[SidebarSessionEntry] Edit confirmed, triggering refresh");
-
             // Notify about the change - this will reload sessions from database
             if (onSessionChanged != null) {
-                System.out.println("[SidebarSessionEntry] Calling onSessionChanged callback");
                 onSessionChanged.run();
-            } else {
-                System.out.println("[SidebarSessionEntry] WARNING: onSessionChanged is null!");
             }
         }
     }
@@ -116,6 +129,14 @@ public final class SidebarSessionEntry extends HBox {
                 onSessionChanged.run();
             }
         }
+    }
+
+    private void handleExportChat() {
+        ChatExporter.exportChat(session, (Stage) getScene().getWindow());
+    }
+
+    private void handleShareChat() {
+        ChatSharer.shareChat(session, (Stage) getScene().getWindow());
     }
 
     public void updateStyling(boolean isSelected) {

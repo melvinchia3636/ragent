@@ -15,11 +15,13 @@ public class APIKeyService {
     private static final String OPENAI_ENV_KEY = "OPENAI_API_KEY";
     private static final String GROQ_ENV_KEY = "GROQ_API_KEY";
     private static final String GEMINI_ENV_KEY = "GEMINI_API_KEY";
+    private static final String PASTEBIN_ENV_KEY = "PASTEBIN_API_KEY";
     private static APIKeyService instance;
 
     private String openaiApiKey;
     private String groqApiKey;
     private String geminiApiKey;
+    private String pastebinApiKey;
 
     /**
      * Private constructor to prevent instantiation
@@ -49,6 +51,7 @@ public class APIKeyService {
         openaiApiKey = loadFromEnv(OPENAI_ENV_KEY);
         groqApiKey = loadFromEnv(GROQ_ENV_KEY);
         geminiApiKey = loadFromEnv(GEMINI_ENV_KEY);
+        pastebinApiKey = loadFromEnv(PASTEBIN_ENV_KEY);
 
         boolean hasOpenAI = openaiApiKey != null && !openaiApiKey.trim().isEmpty();
         boolean hasGroq = groqApiKey != null && !groqApiKey.trim().isEmpty();
@@ -64,6 +67,8 @@ public class APIKeyService {
                 logger.info("Groq API key loaded from .env file");
             if (hasGemini)
                 logger.info("Gemini API key loaded from .env file");
+            if (pastebinApiKey != null && !pastebinApiKey.trim().isEmpty())
+                logger.info("Pastebin API key loaded from .env file");
             return true;
         }
     }
@@ -111,6 +116,24 @@ public class APIKeyService {
      */
     public String getApiKey() {
         return openaiApiKey;
+    }
+
+    /**
+     * Get the Pastebin API key
+     * 
+     * @return Pastebin API key or null if not loaded
+     */
+    public String getPastebinApiKey() {
+        return pastebinApiKey;
+    }
+
+    /**
+     * Check if Pastebin API key is available
+     * 
+     * @return true if API key is available, false otherwise
+     */
+    public boolean hasPastebinApiKey() {
+        return pastebinApiKey != null && !pastebinApiKey.trim().isEmpty();
     }
 
     /**
@@ -167,6 +190,7 @@ public class APIKeyService {
         this.openaiApiKey = null;
         this.groqApiKey = null;
         this.geminiApiKey = null;
+        this.pastebinApiKey = null;
         logger.info("API keys cleared");
     }
 

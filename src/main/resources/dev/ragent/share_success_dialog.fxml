@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1"
+    styleClass="dialog-content">
+
+    <VBox>
+        <Label text="Chat Shared to Pastebin" styleClass="dialog-header" />
+    </VBox>
+
+    <VBox spacing="8">
+        <Label
+            text="Your chat has been successfully uploaded to Pastebin. Copy the URL below to share:"
+            styleClass="dialog-label" wrapText="true" />
+        <TextArea fx:id="urlTextArea" prefRowCount="3" editable="false" wrapText="true"
+            styleClass="url-text-area" />
+    </VBox>
+
+    <HBox styleClass="button-container">
+        <Button text="Copy URL" styleClass="primary-btn" onAction="#handleCopyUrl" />
+        <Button text="OK" styleClass="secondary-btn" onAction="#handleOk" />
+    </HBox>
+</VBox>

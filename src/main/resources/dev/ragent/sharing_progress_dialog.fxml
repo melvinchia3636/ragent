@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1"
+    styleClass="dialog-content" alignment="CENTER" spacing="16">
+
+    <VBox alignment="CENTER" spacing="8">
+        <Label text="Uploading to Pastebin..." styleClass="dialog-header" />
+        <Label fx:id="messageLabel" text="Please wait while your chat is being uploaded."
+            styleClass="dialog-label" wrapText="true" textAlignment="CENTER" />
+    </VBox>
+
+    <!-- Progress indicator -->
+    <ProgressIndicator />
+</VBox>

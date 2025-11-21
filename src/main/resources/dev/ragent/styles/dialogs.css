@@ -65,6 +65,30 @@
   -fx-pref-width: 400;
 }
 
+.dialog-content .text-area {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-radius: 6;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 6;
+  -fx-padding: 10 14;
+  -fx-font-size: 14;
+  -fx-font-family: monospace;
+  -fx-text-fill: -color-text-primary;
+  -fx-pref-width: 400;
+  -fx-pref-row-count: 1;
+  -fx-highlight-fill: -color-selected;
+  -fx-highlight-text-fill: -color-text-primary;
+  -fx-focus-color: -color-bg-dark;
+  -fx-faint-focus-color: transparent;
+}
+
+.dialog-content .text-area .content {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-insets: 0;
+  -fx-padding: 0;
+}
+
 .dialog-content .progress-bar {
   -fx-pref-width: 400;
   -fx-pref-height: 12;
