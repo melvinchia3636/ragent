@@ -103,3 +103,24 @@
 .dangerous-primary-btn:hover {
   -fx-background-color: -color-danger-hover;
 }
+
+.icon-button {
+  -fx-background-color: -color-bg-secondary;
+  -fx-cursor: hand;
+  -fx-padding: 4;
+  -fx-alignment: center;
+  transition: -fx-background-color 0.2s ease;
+}
+
+.icon-button .icon * {
+  -fx-stroke: -color-text-secondary;
+  transition: -fx-stroke 0.2s ease;
+}
+
+.icon-button:hover {
+  -fx-background-color: -color-hover;
+}
+
+.icon-button:hover .icon * {
+  -fx-stroke: -color-text-primary;
+}

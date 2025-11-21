@@ -13,7 +13,7 @@ public class SidebarSessionEntryContextMenu extends MenuButton {
         setGraphicTextGap(0.0);
         setMnemonicParsing(false);
         setStyle("-fx-background-color: transparent;");
-        setGraphic(Icon.load("tabler--dots-vertical.svg"));
+        setGraphic(Icon.load("tabler--dots-vertical"));
     }
 
     public void setMenuItems(MenuItemData[] menuItems) {

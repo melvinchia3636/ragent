@@ -46,6 +46,66 @@ public class MessageHandler {
     }
 
     /**
+     * Create a regeneration callback for an AI message entry
+     */
+    private Runnable createRegenerationCallback(ChatMessageEntry aiMessageEntry) {
+        return () -> regenerateMessage(aiMessageEntry);
+    }
+
+    /**
+     * Regenerate the response for an AI message
+     */
+    public void regenerateMessage(ChatMessageEntry aiMessageEntry) {
+        ChatMessage aiMessage = aiMessageEntry.getMessage();
+
+        // Find the user message that preceded this AI message
+        int aiMessageIndex = chatContainer.getChildren().indexOf(aiMessageEntry);
+        if (aiMessageIndex <= 0) {
+            logger.error("Cannot regenerate: AI message not found in chat container");
+            return;
+        }
+
+        // Get the user message entry (should be immediately before the AI message)
+        ChatMessageEntry userMessageEntry = null;
+        for (int i = aiMessageIndex - 1; i >= 0; i--) {
+            if (chatContainer.getChildren().get(i) instanceof ChatMessageEntry entry) {
+                if (entry.getMessage().isUser()) {
+                    userMessageEntry = entry;
+                    break;
+                }
+            }
+        }
+
+        if (userMessageEntry == null) {
+            logger.error("Cannot regenerate: No user message found before AI message");
+            AlertHelper.showError("Error", "Cannot find the original user message to regenerate the response.");
+            return;
+        }
+
+        ChatMessage userMessage = userMessageEntry.getMessage();
+        Session currentSession = sessionStateHandler.getCurrentSession();
+        if (currentSession == null) {
+            logger.error("Cannot regenerate: No session selected");
+            return;
+        }
+
+        // Delete all messages from database after (and including) the AI message's
+        // timestamp
+        DatabaseService databaseService = DatabaseService.getInstance();
+        if (databaseService != null) {
+            databaseService.deleteMessagesAfter(currentSession.getId(), aiMessage.getTimestamp());
+            logger.info("Deleted messages after timestamp: {}", aiMessage.getTimestamp());
+        }
+
+        // Remove all UI messages after (and including) the AI message
+        int indexToRemoveFrom = aiMessageIndex;
+        chatContainer.getChildren().remove(indexToRemoveFrom, chatContainer.getChildren().size());
+
+        // Regenerate the response
+        generateResponse(userMessage.getContent());
+    }
+
+    /**
      * Handle sending a message.
      */
     public void handleSendMessage() {
@@ -99,13 +159,38 @@ public class MessageHandler {
             databaseService.saveChatMessage(currentSession.getId(), userChatMessage);
         }
 
+        // Generate the response
+        generateResponse(userMessage);
+    }
+
+    /**
+     * Generate an AI response for the given user message
+     */
+    private void generateResponse(String userMessage) {
+        RAGService ragService = sessionStateHandler.getRagService();
+        if (ragService == null) {
+            logger.error("Cannot generate response: RAG service not initialized");
+            return;
+        }
+
+        Session currentSession = sessionStateHandler.getCurrentSession();
+        if (currentSession == null) {
+            logger.error("Cannot generate response: No session selected");
+            return;
+        }
+
         // Create placeholder for AI response
         ChatMessage aiChatMessage = new ChatMessage("...", false);
         ChatMessageEntry aiMessageBox = new ChatMessageEntry(aiChatMessage);
         chatContainer.getChildren().add(aiMessageBox);
 
-        // Disable all controls while processing
+        // Set the regeneration callback after the message box is created
+        aiMessageBox.setOnRegenerateCallback(createRegenerationCallback(aiMessageBox));
+        logger.debug("Set regeneration callback for new AI message: {}", aiChatMessage.getId());
+
+        // Disable all controls and message buttons while processing
         toggleAllControlsCallback.run();
+        setAllMessageButtonsEnabled(false);
         statusLabel.setText("Generating response...");
 
         // Query RAG with streaming in background
@@ -115,7 +200,6 @@ public class MessageHandler {
                 ragService.queryStreaming(finalUserMessage, new RAGService.StreamingCallback() {
                     private final StringBuilder responseBuilder = new StringBuilder();
                     private List<String> sources = new ArrayList<>();
-                    private int segmentCount = 0;
 
                     @Override
                     public void onProgress(String progressMessage) {
@@ -128,7 +212,6 @@ public class MessageHandler {
                     @Override
                     public void onStart(List<String> sourceDocs, int segments) {
                         sources = sourceDocs;
-                        segmentCount = segments;
                     }
 
                     @Override
@@ -159,8 +242,9 @@ public class MessageHandler {
                                 databaseService.saveChatMessage(currentSession.getId(), finalAiMessage);
                             }
 
-                            // Re-enable all controls
+                            // Re-enable all controls and message buttons
                             toggleAllControlsCallback.run();
+                            setAllMessageButtonsEnabled(true);
                             statusLabel.setText("Ready");
                             messageInput.requestFocus();
                         });
@@ -178,8 +262,9 @@ public class MessageHandler {
 
                             AlertHelper.showError("Error", "Failed to get response: " + error.getMessage());
 
-                            // Re-enable all controls
+                            // Re-enable all controls and message buttons
                             toggleAllControlsCallback.run();
+                            setAllMessageButtonsEnabled(true);
                             statusLabel.setText("Error occurred");
                             messageInput.requestFocus();
                         });
@@ -196,11 +281,23 @@ public class MessageHandler {
 
                     AlertHelper.showError("Error", "Failed to get response", e.getMessage());
 
-                    // Re-enable all controls
+                    // Re-enable all controls and message buttons
                     toggleAllControlsCallback.run();
+                    setAllMessageButtonsEnabled(true);
                     statusLabel.setText("Error getting response");
                 });
             }
         }).start();
+    }
+
+    /**
+     * Enable or disable buttons on all message entries
+     */
+    private void setAllMessageButtonsEnabled(boolean enabled) {
+        for (javafx.scene.Node node : chatContainer.getChildren()) {
+            if (node instanceof ChatMessageEntry messageEntry) {
+                messageEntry.setButtonsEnabled(enabled);
+            }
+        }
     }
 }

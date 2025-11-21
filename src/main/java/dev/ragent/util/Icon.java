@@ -17,12 +17,13 @@ public class Icon {
      * 
      * @param iconName The name of the icon resource relative to the icons directory
      *                 (e.g.,
-     *                 "tabler--dots-vertical.svg")
+     *                 "tabler--dots-vertical")
      * @return The loaded SVGImage
      */
     public static SVGImage load(String iconName) {
         try {
-            SVGImage svgImage = SVGLoader.load(Icon.class.getResource("/dev/ragent/icons/" + iconName));
+            SVGImage svgImage = SVGLoader
+                    .load(Icon.class.getResource(String.format("/dev/ragent/icons/%s.svg", iconName)));
             if (svgImage == null) {
                 throw new RuntimeException("Icon not found: " + iconName);
             }

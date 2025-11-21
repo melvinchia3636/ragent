@@ -68,7 +68,7 @@ public class EditSessionDialog extends BaseDialog {
         topKSlider.setValue(session.getTopK());
 
         Button okBtn = (Button) stage.getScene().lookup("#okButton");
-        okBtn.setGraphic(Icon.load("tabler--device-floppy.svg"));
+        okBtn.setGraphic(Icon.load("tabler--device-floppy"));
         okBtn.setText("Save");
 
         // Disable OK button if name is empty

@@ -306,6 +306,24 @@ public class DatabaseService {
     }
 
     /**
+     * Delete all messages after (and including) a specific message timestamp in a
+     * session
+     */
+    public void deleteMessagesAfter(String sessionId, LocalDateTime timestamp) {
+        String sql = "DELETE FROM messages WHERE session_id = ? AND timestamp >= ?";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, sessionId);
+            pstmt.setString(2, timestamp.toString());
+            int deleted = pstmt.executeUpdate();
+            logger.info("Deleted {} messages after timestamp {} for session {}", deleted, timestamp, sessionId);
+        } catch (SQLException e) {
+            logger.error("Failed to delete messages after timestamp", e);
+            throw new RuntimeException("Failed to delete messages after timestamp", e);
+        }
+    }
+
+    /**
      * Recursively delete a directory
      */
     private void deleteDirectory(File directory) {

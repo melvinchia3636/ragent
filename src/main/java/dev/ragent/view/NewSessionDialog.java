@@ -75,7 +75,7 @@ public class NewSessionDialog extends BaseDialog {
 
     @FXML
     private void initialize() {
-        okButton.setGraphic(Icon.load("tabler--plus.svg"));
+        okButton.setGraphic(Icon.load("tabler--plus"));
     }
 
     /**

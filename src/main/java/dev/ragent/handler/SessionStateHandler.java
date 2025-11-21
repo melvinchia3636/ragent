@@ -10,9 +10,11 @@ import dev.ragent.service.DatabaseService;
 import dev.ragent.service.RAGService;
 import dev.ragent.service.ResourceService;
 import dev.ragent.util.Constants;
+import dev.ragent.util.Icon;
 import dev.ragent.view.AlertHelper;
 import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.HBox;
@@ -28,6 +30,9 @@ public class SessionStateHandler {
     private final Label sessionNameLabel;
     private final Label sessionCreatedLabel;
     private final Label modelLabel;
+    private final Label temperatureLabel;
+    private final Label topKLabel;
+    private final Label queryTransformationLabel;
     private final Button manageKnowledgebaseButton;
     private final Button clearSessionButton;
     private final TextArea messageInput;
@@ -42,6 +47,9 @@ public class SessionStateHandler {
             Label sessionNameLabel,
             Label sessionCreatedLabel,
             Label modelLabel,
+            Label temperatureLabel,
+            Label topKLabel,
+            Label queryTransformationLabel,
             Button manageKnowledgebaseButton,
             Button clearSessionButton,
             TextArea messageInput,
@@ -50,6 +58,9 @@ public class SessionStateHandler {
         this.sessionNameLabel = sessionNameLabel;
         this.sessionCreatedLabel = sessionCreatedLabel;
         this.modelLabel = modelLabel;
+        this.temperatureLabel = temperatureLabel;
+        this.topKLabel = topKLabel;
+        this.queryTransformationLabel = queryTransformationLabel;
         this.manageKnowledgebaseButton = manageKnowledgebaseButton;
         this.clearSessionButton = clearSessionButton;
         this.messageInput = messageInput;
@@ -246,12 +257,11 @@ public class SessionStateHandler {
             sessionNameLabel.setText(session.getName());
             sessionCreatedLabel.setText("Created on " + session.getFormattedCreatedAt());
 
-            String queryTransformationStatus = session.isUseQueryTransformation()
-                    ? "enabled"
-                    : "disabled";
-            modelLabel.setText(session.getModel().replace("|", " / ") + " (query transformation "
-                    + queryTransformationStatus + ")");
-
+            modelLabel.setText(session.getModel().replace("|", " / "));
+            temperatureLabel.setText(String.format("Temp: %.1f", session.getTemperature()));
+            topKLabel.setText(String.format("Top K: %d", session.getTopK()));
+            queryTransformationLabel
+                    .setText("QTrans: " + (session.isUseQueryTransformation() ? "Enabled" : "Disabled"));
             sessionHeader.setVisible(true);
             sessionHeader.setManaged(true);
             manageKnowledgebaseButton.setVisible(true);
@@ -273,6 +283,9 @@ public class SessionStateHandler {
             sessionNameLabel.setText("No Session Selected");
             sessionCreatedLabel.setText("");
             modelLabel.setText("N/A");
+            temperatureLabel.setText("N/A");
+            topKLabel.setText("N/A");
+            queryTransformationLabel.setText("N/A");
             sessionHeader.setVisible(false);
             sessionHeader.setManaged(false);
             manageKnowledgebaseButton.setVisible(false);

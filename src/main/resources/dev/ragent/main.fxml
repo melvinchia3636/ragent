@@ -58,10 +58,17 @@
          </HBox>
       </VBox>
    </SplitPane>
-   <HBox id="statusBar" alignment="CENTER_LEFT" spacing="5.0" fx:id="statusBar">
+   <HBox id="statusBar" alignment="CENTER_LEFT" spacing="8.0" fx:id="statusBar">
       <Label id="statusLabel" fx:id="statusLabel" maxWidth="-1.0"
          text="Ready" HBox.hgrow="ALWAYS" />
       <Pane prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
+      <Label id="temperatureLabel" fx:id="temperatureLabel" maxWidth="-1.0" text="Temp: N/A"
+         HBox.hgrow="NEVER" />
+      <Label id="topKLabel" fx:id="topKLabel" maxWidth="-1.0" text="Top K: N/A"
+         HBox.hgrow="NEVER" />
+      <Label id="queryTransformationLabel" fx:id="queryTransformationLabel" maxWidth="-1.0"
+         text="N/A"
+         HBox.hgrow="NEVER" />
       <Label id="modelLabel" fx:id="modelLabel" maxWidth="-1.0" text="N/A"
          HBox.hgrow="NEVER" />
    </HBox>

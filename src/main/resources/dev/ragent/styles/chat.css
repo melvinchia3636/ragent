@@ -112,9 +112,13 @@
 }
 
 #statusLabel,
-#modelLabel {
+#modelLabel,
+#temperatureLabel,
+#topKLabel,
+#queryTransformationLabel {
   -fx-font-size: 12;
   -fx-text-fill: -color-text-secondary;
+  -fx-graphic-text-gap: 4;
 }
 
 #sendButton {
@@ -144,4 +148,13 @@
   -fx-font-size: 18;
   -fx-text-fill: -color-text-muted;
   -fx-opacity: 0.3;
+}
+
+.chat-message-buttons {
+  -fx-opacity: 0;
+  -fx-transition: -fx-opacity 1s ease;
+}
+
+.chat-message-buttons.hovered {
+  -fx-opacity: 1;
 }

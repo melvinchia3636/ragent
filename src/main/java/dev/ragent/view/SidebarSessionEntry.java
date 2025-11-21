@@ -21,13 +21,13 @@ public final class SidebarSessionEntry extends HBox {
     private final Session session;
     private final Runnable onSessionChanged;
     private final SidebarSessionEntryContextMenu.MenuItemData[] menuItems = new SidebarSessionEntryContextMenu.MenuItemData[] {
-            new SidebarSessionEntryContextMenu.MenuItemData("Edit Session", "tabler--pencil.svg", this::handleEdit,
+            new SidebarSessionEntryContextMenu.MenuItemData("Edit Session", "tabler--pencil", this::handleEdit,
                     false),
-            new SidebarSessionEntryContextMenu.MenuItemData("Export Chat", "tabler--file-export.svg",
+            new SidebarSessionEntryContextMenu.MenuItemData("Export Chat", "tabler--file-export",
                     this::handleExportChat, false),
-            new SidebarSessionEntryContextMenu.MenuItemData("Share Chat", "tabler--share.svg", this::handleShareChat,
+            new SidebarSessionEntryContextMenu.MenuItemData("Share Chat", "tabler--share", this::handleShareChat,
                     !APIKeyService.getInstance().hasPastebinApiKey()),
-            new SidebarSessionEntryContextMenu.MenuItemData("Delete Session", "tabler--trash-x.svg",
+            new SidebarSessionEntryContextMenu.MenuItemData("Delete Session", "tabler--trash-x",
                     this::handleDelete, false)
     };
 

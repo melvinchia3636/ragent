@@ -36,7 +36,7 @@ public class PreferencesDialog extends BaseDialog {
 
     @FXML
     private void initialize() {
-        saveButton.setGraphic(Icon.load("tabler--device-floppy.svg"));
+        saveButton.setGraphic(Icon.load("tabler--device-floppy"));
     }
 
     /**

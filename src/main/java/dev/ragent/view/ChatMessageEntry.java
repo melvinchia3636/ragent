@@ -1,8 +1,14 @@
 package dev.ragent.view;
 
 import dev.ragent.model.ChatMessage;
+import dev.ragent.util.Icon;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -14,15 +20,34 @@ public final class ChatMessageEntry extends VBox {
 
     private final Label messageLabel;
     private Label topLabel;
-    private final HBox messageContainer;
+    private HBox messageContainer;
+    private HBox buttonsContainer;
     private final boolean isUserMessage;
+    private final ChatMessage message;
+    private Runnable onRegenerateCallback;
 
     public ChatMessageEntry(ChatMessage message) {
+        this(message, null);
+    }
+
+    public ChatMessageEntry(ChatMessage message, Runnable onRegenerateCallback) {
+        this.message = message;
+        this.onRegenerateCallback = onRegenerateCallback;
         this.messageLabel = new Label(message.getContent());
         this.isUserMessage = message.isUser();
 
-        // Create container for message alignment
-        this.messageContainer = new HBox();
+        setupMessageContainer();
+        setupActionButtons();
+
+        setupMessageLayout();
+
+        setSpacing(0);
+    }
+
+    private HBox setupMessageContainer() {
+        messageContainer = new HBox();
+
+        messageContainer.setSpacing(12);
 
         // Set alignment and style class based on message type
         if (message.isUser()) {
@@ -37,7 +62,80 @@ public final class ChatMessageEntry extends VBox {
         messageLabel.setWrapText(true);
         messageLabel.setMinHeight(Region.USE_PREF_SIZE);
 
+        return messageContainer;
+    }
+
+    private void setupActionButtons() {
+        ChatMessageEntryActionButtons.ActionButtonData[] actionButtonsData = new ChatMessageEntryActionButtons.ActionButtonData[] {
+                new ChatMessageEntryActionButtons.ActionButtonData(
+                        "tabler--copy",
+                        e -> this.handleCopy(e),
+                        true),
+                new ChatMessageEntryActionButtons.ActionButtonData(
+                        "tabler--refresh",
+                        e -> this.handleRegenerate(),
+                        !message.isUser())
+        };
+
+        ChatMessageEntryActionButtons actionButtons = new ChatMessageEntryActionButtons();
+        actionButtons.addActionButtons(actionButtonsData);
+
+        buttonsContainer = actionButtons;
+    }
+
+    private void handleCopy(ActionEvent event) {
+        Button copyButton = (Button) event.getSource();
+
+        ClipboardContent content = new ClipboardContent();
+        content.putString(messageLabel.getText());
+        Clipboard.getSystemClipboard().setContent(content);
+
+        copyButton.setGraphic(Icon.load("tabler--check"));
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(1000); // Show the check icon for 1 second
+            } catch (InterruptedException ignored) {
+            }
+
+            Platform.runLater(() -> {
+                copyButton.setGraphic(Icon.load("tabler--copy"));
+            });
+        }).start();
+    }
+
+    private void handleRegenerate() {
+        if (onRegenerateCallback != null) {
+            boolean confirmed = AlertHelper.showConfirm(
+                    "Regenerate Response",
+                    "Are you sure you want to regenerate this response?",
+                    "All chat history after this message will be removed. This action cannot be undone.");
+            if (confirmed) {
+                onRegenerateCallback.run();
+            }
+        } else {
+            AlertHelper.showError("Error", "Cannot regenerate this message. Regeneration callback not set.");
+        }
+    }
+
+    private void setupMessageLayout() {
         messageContainer.getChildren().add(messageLabel);
+
+        if (message.isUser()) {
+            messageContainer.getChildren().add(0, buttonsContainer);
+        } else {
+            messageContainer.getChildren().add(buttonsContainer);
+        }
+
+        messageContainer.setOnMouseEntered(e -> {
+            if (!buttonsContainer.getStyleClass().contains("hovered")) {
+                buttonsContainer.getStyleClass().add("hovered");
+            }
+        });
+
+        messageContainer.setOnMouseExited(e -> {
+            buttonsContainer.getStyleClass().remove("hovered");
+        });
 
         // Add message container first
         getChildren().add(messageContainer);
@@ -46,8 +144,6 @@ public final class ChatMessageEntry extends VBox {
         if (!message.isUser() && message.hasSources()) {
             setTopLabel("Referenced from: " + message.getSources());
         }
-
-        setSpacing(0);
     }
 
     /**
@@ -79,5 +175,26 @@ public final class ChatMessageEntry extends VBox {
             // Add the label before the message container
             getChildren().add(0, topLabel);
         }
+    }
+
+    /**
+     * Get the chat message
+     */
+    public ChatMessage getMessage() {
+        return message;
+    }
+
+    /**
+     * Set the regeneration callback (for lazy initialization)
+     */
+    public void setOnRegenerateCallback(Runnable callback) {
+        this.onRegenerateCallback = callback;
+    }
+
+    /**
+     * Enable or disable the buttons container
+     */
+    public void setButtonsEnabled(boolean enabled) {
+        buttonsContainer.setDisable(!enabled);
     }
 }

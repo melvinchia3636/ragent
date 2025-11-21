@@ -48,6 +48,15 @@ public class MainController {
     private Label statusLabel;
 
     @FXML
+    private Label temperatureLabel;
+
+    @FXML
+    private Label topKLabel;
+
+    @FXML
+    private Label queryTransformationLabel;
+
+    @FXML
     private Label modelLabel;
 
     @FXML
@@ -94,6 +103,9 @@ public class MainController {
                 sendButton,
                 statusLabel,
                 modelLabel,
+                temperatureLabel,
+                topKLabel,
+                queryTransformationLabel,
                 manageKnowledgebaseButton,
                 clearSessionButton,
                 sessionSidebar);
@@ -165,14 +177,17 @@ public class MainController {
 
     private void initializeIcons() {
         clearSessionButton.setGraphic(
-                Icon.load("tabler--trash-x.svg"));
+                Icon.load("tabler--trash-x"));
         manageKnowledgebaseButton.setGraphic(
-                Icon.load("tabler--database-cog.svg"));
+                Icon.load("tabler--database-cog"));
         sendButton.setGraphic(
-                Icon.load("tabler--arrow-up.svg"));
+                Icon.load("tabler--arrow-up"));
         sendButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         modelLabel.setGraphic(
-                Icon.load("tabler--robot.svg"));
+                Icon.load("tabler--robot"));
+        temperatureLabel.setGraphic(Icon.load("tabler--temperature"));
+        topKLabel.setGraphic(Icon.load("tabler--books"));
+        queryTransformationLabel.setGraphic(Icon.load("tabler--transform"));
     }
 
     private void initializeTheme() {

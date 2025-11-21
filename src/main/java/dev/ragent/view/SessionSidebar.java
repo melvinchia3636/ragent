@@ -61,10 +61,10 @@ public class SessionSidebar extends VBox {
         scrollPane.setId("sessionList");
 
         newSessionButton.setGraphic(
-                Icon.load("tabler--edit.svg"));
+                Icon.load("tabler--edit"));
 
         preferencesButton.setGraphic(
-                Icon.load("tabler--settings-2.svg"));
+                Icon.load("tabler--settings-2"));
     }
 
     /**

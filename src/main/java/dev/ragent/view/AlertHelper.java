@@ -140,10 +140,10 @@ public class AlertHelper {
         String iconName;
 
         switch (alert.getAlertType()) {
-            case ERROR -> iconName = "tabler--square-x.svg";
-            case WARNING -> iconName = "tabler--alert-triangle.svg";
-            case INFORMATION -> iconName = "tabler--info-circle.svg";
-            case CONFIRMATION -> iconName = "tabler--help-hexagon.svg";
+            case ERROR -> iconName = "tabler--square-x";
+            case WARNING -> iconName = "tabler--alert-triangle";
+            case INFORMATION -> iconName = "tabler--info-circle";
+            case CONFIRMATION -> iconName = "tabler--help-hexagon";
             default -> {
                 return;
             }

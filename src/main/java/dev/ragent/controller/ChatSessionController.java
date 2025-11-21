@@ -47,6 +47,9 @@ public class ChatSessionController {
             Button sendButton,
             Label statusLabel,
             Label modelLabel,
+            Label temperatureLabel,
+            Label topKLabel,
+            Label queryTransformationLabel,
             Button manageKnowledgebaseButton,
             Button clearSessionButton,
             SessionSidebar sessionSidebar) {
@@ -59,6 +62,9 @@ public class ChatSessionController {
                 sessionNameLabel,
                 sessionCreatedLabel,
                 modelLabel,
+                temperatureLabel,
+                topKLabel,
+                queryTransformationLabel,
                 manageKnowledgebaseButton,
                 clearSessionButton,
                 messageInput,
@@ -75,6 +81,9 @@ public class ChatSessionController {
                 statusLabel,
                 sessionStateHandler,
                 this::toggleControlsDuringProcessing);
+
+        // Link handlers for regeneration functionality
+        chatHistoryHandler.setMessageHandler(messageHandler);
 
         this.knowledgebaseHandler = new KnowledgebaseHandler(
                 chatContainer,

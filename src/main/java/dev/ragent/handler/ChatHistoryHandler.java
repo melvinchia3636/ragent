@@ -31,6 +31,7 @@ public class ChatHistoryHandler {
     private final Label statusLabel;
     private final SessionStateHandler sessionStateHandler;
     private VBox placeholderContainer;
+    private MessageHandler messageHandler;
 
     public ChatHistoryHandler(
             VBox chatContainer,
@@ -47,6 +48,26 @@ public class ChatHistoryHandler {
     }
 
     /**
+     * Set the message handler (for regeneration callbacks)
+     */
+    public void setMessageHandler(MessageHandler messageHandler) {
+        this.messageHandler = messageHandler;
+    }
+
+    /**
+     * Create a regeneration callback for an AI message entry
+     */
+    private Runnable createRegenerationCallback(ChatMessageEntry aiMessageEntry) {
+        return () -> {
+            if (messageHandler == null) {
+                logger.error("Cannot regenerate: MessageHandler not set");
+                return;
+            }
+            messageHandler.regenerateMessage(aiMessageEntry);
+        };
+    }
+
+    /**
      * Initialize the placeholder container for when no session is selected.
      */
     private void initializePlaceholder() {
@@ -57,7 +78,7 @@ public class ChatHistoryHandler {
         this.placeholderContainer.setMaxWidth(Double.MAX_VALUE);
         this.placeholderContainer.setMaxHeight(Double.MAX_VALUE);
 
-        SVGImage iconView = Icon.load("tabler--message-search.svg");
+        SVGImage iconView = Icon.load("tabler--message-search");
         iconView.getStyleClass().add("chat-placeholder-icon");
 
         Label titleLabel = new Label("RAGent");
@@ -132,6 +153,19 @@ public class ChatHistoryHandler {
                 } else {
                     for (ChatMessage message : history) {
                         ChatMessageEntry messageBox = new ChatMessageEntry(message);
+                        // Add regeneration callback for AI messages
+                        if (!message.isUser()) {
+                            // Always set the callback, even if messageHandler is currently null
+                            // The callback will check for null at execution time
+                            messageBox.setOnRegenerateCallback(createRegenerationCallback(messageBox));
+                            if (messageHandler == null) {
+                                logger.warn(
+                                        "MessageHandler is null when loading chat history - regeneration may not work for message: {}",
+                                        message.getId());
+                            } else {
+                                logger.debug("Set regeneration callback for AI message: {}", message.getId());
+                            }
+                        }
                         chatContainer.getChildren().add(messageBox);
                     }
                     logger.info("Successfully loaded {} messages for session: {}",
