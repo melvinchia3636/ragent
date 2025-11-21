@@ -1,26 +1,22 @@
 package dev.ragent.view;
 
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.io.IOException;
+import java.util.List;
 
 import dev.ragent.model.Session;
 import dev.ragent.service.DatabaseService;
-import dev.ragent.util.Constants;
 import dev.ragent.util.Icon;
 
 /**
  * Dialog for creating a new session session
  */
-public class NewSessionDialog {
+public class NewSessionDialog extends BaseDialog {
     @FXML
     private TextField nameField;
     @FXML
@@ -30,7 +26,6 @@ public class NewSessionDialog {
     @FXML
     private Button okButton;
 
-    private final Stage stage;
     private Session createdSession = null;
 
     /**
@@ -39,43 +34,20 @@ public class NewSessionDialog {
      * @param owner the owner window
      */
     public NewSessionDialog(Stage owner) {
-        this.stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.initOwner(owner);
-        stage.setTitle("New Session");
-        stage.setResizable(false);
+        super(owner, "New Session", "/dev/ragent/session_dialog.fxml");
 
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/dev/ragent/session_dialog.fxml"));
-            loader.setController(this);
-            Scene scene = new Scene(loader.load());
-            scene.getStylesheets().add(getClass().getResource("/dev/ragent/styles/index.css").toExternalForm());
+        List<String> availableModels = ModelComboBoxHelper.configureModelComboBox(modelComboBox);
+        ModelComboBoxHelper.setDefaultModel(modelComboBox, availableModels);
 
-            // Apply theme
-            if (dev.ragent.service.PreferencesService.getInstance().isDarkMode()) {
-                scene.getRoot().getStyleClass().add("dark-theme");
-            }
+        queryTransformationCheckBox.setSelected(true);
 
-            stage.setScene(scene);
+        okButton.setText("Create");
+        okButton.setDisable(true);
 
-            // Initialize fields
-            modelComboBox.getItems().addAll(Constants.AVAILABLE_MODELS);
-            modelComboBox.setValue(Constants.DEFAULT_MODEL);
-            queryTransformationCheckBox.setSelected(true);
-
-            // Configure button for create mode
-            okButton.setText("Create");
-            okButton.setDisable(true);
-
-            // Disable OK button if name is empty
-            nameField.textProperty().addListener((observable, oldValue, newValue) -> {
-                okButton.setDisable(newValue.trim().isEmpty());
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to load new session dialog", e);
-        }
+        // Disable OK button if name is empty
+        nameField.textProperty().addListener((observable, oldValue, newValue) -> {
+            okButton.setDisable(newValue.trim().isEmpty());
+        });
     }
 
     @FXML
@@ -88,21 +60,21 @@ public class NewSessionDialog {
      * 
      * @return The created Session, or null if cancelled
      */
-    public Session showAndWait() {
-        stage.showAndWait();
+    public Session showAndWaitForSession() {
+        super.showAndWait();
         return createdSession;
     }
 
     @FXML
     private void handleOk() {
         createdSession = createSession();
-        stage.close();
+        close();
     }
 
     @FXML
     private void handleCancel() {
         createdSession = null;
-        stage.close();
+        close();
     }
 
     /**
@@ -119,7 +91,7 @@ public class NewSessionDialog {
 
         DatabaseService databaseService = DatabaseService.getInstance();
         if (databaseService == null) {
-            dev.ragent.view.AlertHelper.showError(
+            AlertHelper.showError(
                     "Database Error",
                     "Cannot Create Session",
                     "The database is unavailable. Please restart the application.");

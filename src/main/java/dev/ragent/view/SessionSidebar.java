@@ -5,12 +5,12 @@ import java.util.function.Consumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.girod.javafx.svgimage.SVGImage;
 
 import dev.ragent.model.Session;
 import dev.ragent.service.DatabaseService;
 import dev.ragent.service.PreferencesService;
 import dev.ragent.util.Icon;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -20,6 +20,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /**
  * Custom sidebar component for displaying and managing sessions
@@ -114,7 +115,7 @@ public class SessionSidebar extends VBox {
                             "Error: " + e.getMessage());
 
             // Exit the application
-            javafx.application.Platform.exit();
+            Platform.exit();
             System.exit(1);
             return;
         }
@@ -174,8 +175,8 @@ public class SessionSidebar extends VBox {
 
     @FXML
     private void handleOpenPreferences() {
-        PreferencesDialog dialog = new PreferencesDialog((javafx.stage.Stage) getScene().getWindow());
-        boolean saved = dialog.showAndWait();
+        PreferencesDialog dialog = new PreferencesDialog((Stage) getScene().getWindow());
+        boolean saved = dialog.showAndWaitForResult();
 
         if (saved) {
             logger.debug("Preference updated");
@@ -223,8 +224,8 @@ public class SessionSidebar extends VBox {
      */
     @FXML
     private void handleNewSession() {
-        NewSessionDialog dialog = new NewSessionDialog((javafx.stage.Stage) getScene().getWindow());
-        Session newSession = dialog.showAndWait();
+        NewSessionDialog dialog = new NewSessionDialog((Stage) getScene().getWindow());
+        Session newSession = dialog.showAndWaitForSession();
 
         if (newSession != null) {
             loadSessions();

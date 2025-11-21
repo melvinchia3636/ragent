@@ -1,21 +1,23 @@
 package dev.ragent.handler;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.girod.javafx.svgimage.SVGImage;
 
 import dev.ragent.model.ChatMessage;
 import dev.ragent.model.Session;
 import dev.ragent.service.DatabaseService;
 import dev.ragent.service.RAGService;
+import dev.ragent.util.Icon;
 import dev.ragent.view.AlertHelper;
 import dev.ragent.view.ChatAreaMessage;
 import dev.ragent.view.ChatMessageEntry;
 import javafx.application.Platform;
-import javafx.scene.control.ButtonType;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 /**
@@ -28,6 +30,7 @@ public class ChatHistoryHandler {
     private final VBox chatContainer;
     private final Label statusLabel;
     private final SessionStateHandler sessionStateHandler;
+    private VBox placeholderContainer;
 
     public ChatHistoryHandler(
             VBox chatContainer,
@@ -36,6 +39,49 @@ public class ChatHistoryHandler {
         this.chatContainer = chatContainer;
         this.statusLabel = statusLabel;
         this.sessionStateHandler = sessionStateHandler;
+
+        initializePlaceholder();
+
+        // Show placeholder initially
+        showPlaceholder();
+    }
+
+    /**
+     * Initialize the placeholder container for when no session is selected.
+     */
+    private void initializePlaceholder() {
+        // Create placeholder container with title and subtitle
+        this.placeholderContainer = new VBox(8);
+        this.placeholderContainer.setAlignment(Pos.CENTER);
+        VBox.setVgrow(this.placeholderContainer, Priority.ALWAYS);
+        this.placeholderContainer.setMaxWidth(Double.MAX_VALUE);
+        this.placeholderContainer.setMaxHeight(Double.MAX_VALUE);
+
+        SVGImage iconView = Icon.load("tabler--message-search.svg");
+        iconView.getStyleClass().add("chat-placeholder-icon");
+
+        Label titleLabel = new Label("RAGent");
+        titleLabel.getStyleClass().add("chat-placeholder-title");
+
+        Label subtitleLabel = new Label("An experience beyond just an assignment");
+        subtitleLabel.getStyleClass().add("chat-placeholder-subtitle");
+
+        this.placeholderContainer.getChildren().addAll(iconView, titleLabel, subtitleLabel);
+    }
+
+    /**
+     * Show the placeholder label when no session is selected.
+     */
+    public void showPlaceholder() {
+        chatContainer.getChildren().clear();
+        chatContainer.getChildren().add(placeholderContainer);
+    }
+
+    /**
+     * Hide the placeholder label when a session is selected.
+     */
+    private void hidePlaceholder() {
+        chatContainer.getChildren().remove(placeholderContainer);
     }
 
     /**
@@ -51,6 +97,7 @@ public class ChatHistoryHandler {
         logger.info("========== Loading Chat History ==========");
         logger.info("Session: id={}, name='{}'", currentSession.getId(), currentSession.getName());
 
+        hidePlaceholder();
         ChatAreaMessage loadingMessage = new ChatAreaMessage("Loading chat history...");
         chatContainer.getChildren().add(loadingMessage);
         statusLabel.setText("Loading chat history...");
@@ -141,9 +188,9 @@ public class ChatHistoryHandler {
     }
 
     /**
-     * Clear the chat container.
+     * Clear the chat container and show placeholder.
      */
     public void clearChatContainer() {
-        chatContainer.getChildren().clear();
+        showPlaceholder();
     }
 }

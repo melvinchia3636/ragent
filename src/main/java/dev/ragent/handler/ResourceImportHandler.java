@@ -1,7 +1,9 @@
 package dev.ragent.handler;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import dev.ragent.service.RAGService;
 import dev.ragent.service.ResourceService;
@@ -29,7 +31,7 @@ public class ResourceImportHandler {
      * Import a single file with progress tracking
      */
     public void importSingleFile(File file, String targetFileName, boolean overwrite, Stage ownerStage,
-            Runnable onSuccess, java.util.function.Consumer<String> onError) {
+            Runnable onSuccess, Consumer<String> onError) {
         ProgressDialog progressDialog = new ProgressDialog(ownerStage);
 
         Thread importThread = new Thread(() -> {
@@ -81,7 +83,7 @@ public class ResourceImportHandler {
      * Import multiple files with batch progress tracking
      */
     public void importMultipleFiles(List<File> files, boolean overwriteAll, Stage ownerStage,
-            java.util.function.Consumer<ImportResult> onComplete) {
+            Consumer<ImportResult> onComplete) {
         ProgressDialog progressDialog = new ProgressDialog(ownerStage);
 
         Thread processingThread = new Thread(() -> {
@@ -203,7 +205,7 @@ public class ResourceImportHandler {
         public int failed = 0;
         public int skipped = 0;
         public boolean cancelled = false;
-        public List<String> failedFiles = new java.util.ArrayList<>();
+        public List<String> failedFiles = new ArrayList<>();
     }
 
     /**

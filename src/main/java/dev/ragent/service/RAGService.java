@@ -32,6 +32,7 @@ import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dev.ragent.model.QueryResponse;
+import dev.ragent.util.Constants;
 
 /**
  * Service for handling RAG (Retrieval Augmented Generation) operations
@@ -69,24 +70,61 @@ public class RAGService {
         this.useQueryTransformation = useQueryTransformation;
         this.sessionHistory = new ArrayList<>();
         this.indexedFiles = new HashMap<>();
-        String apiKey = APIKeyService.getInstance().getApiKey();
+
+        // Extract provider and actual model name
+        String provider = Constants.getProvider(modelName);
+        String actualModelName = Constants.getModelName(modelName);
+        String openAIAPIKey = APIKeyService.getInstance().getApiKey("openai");
+        String apiKey = APIKeyService.getInstance().getApiKey(provider);
 
         this.embeddingModel = OpenAiEmbeddingModel.builder()
-                .apiKey(apiKey)
+                .apiKey(openAIAPIKey)
                 .modelName("text-embedding-3-small")
                 .build();
         this.embeddingStore = new InMemoryEmbeddingStore<>();
-        this.chatModel = OpenAiChatModel.builder()
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .temperature(1.0)
-                .build();
 
-        this.streamingChatModel = OpenAiStreamingChatModel.builder()
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .temperature(1.0)
-                .build();
+        // Build chat model with provider-specific configuration
+        if ("groq".equalsIgnoreCase(provider)) {
+            this.chatModel = OpenAiChatModel.builder()
+                    .baseUrl("https://api.groq.com/openai/v1")
+                    .apiKey(apiKey)
+                    .modelName(actualModelName)
+                    .temperature(1.0)
+                    .build();
+
+            this.streamingChatModel = OpenAiStreamingChatModel.builder()
+                    .baseUrl("https://api.groq.com/openai/v1")
+                    .apiKey(apiKey)
+                    .modelName(actualModelName)
+                    .temperature(1.0)
+                    .build();
+        } else if ("gemini".equalsIgnoreCase(provider)) {
+            this.chatModel = OpenAiChatModel.builder()
+                    .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
+                    .apiKey(apiKey)
+                    .modelName(actualModelName)
+                    .temperature(1.0)
+                    .build();
+
+            this.streamingChatModel = OpenAiStreamingChatModel.builder()
+                    .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
+                    .apiKey(apiKey)
+                    .modelName(actualModelName)
+                    .temperature(1.0)
+                    .build();
+        } else {
+            this.chatModel = OpenAiChatModel.builder()
+                    .apiKey(apiKey)
+                    .modelName(actualModelName)
+                    .temperature(1.0)
+                    .build();
+
+            this.streamingChatModel = OpenAiStreamingChatModel.builder()
+                    .apiKey(apiKey)
+                    .modelName(actualModelName)
+                    .temperature(1.0)
+                    .build();
+        }
 
         this.indexingService = new DocumentIndexingService(sessionId, embeddingModel, embeddingStore, indexedFiles);
         this.rerankingService = new RerankingService();
@@ -262,7 +300,7 @@ public class RAGService {
         sessionHistory.add(aiMessage);
 
         // Return response with sources
-        return new QueryResponse(responseText, new java.util.ArrayList<>(sourceFiles));
+        return new QueryResponse(responseText, new ArrayList<>(sourceFiles));
     }
 
     /**

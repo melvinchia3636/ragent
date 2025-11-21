@@ -1,25 +1,21 @@
 package dev.ragent.view;
 
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.io.IOException;
+import java.util.List;
 
 import dev.ragent.model.Session;
 import dev.ragent.service.DatabaseService;
-import dev.ragent.util.Constants;
 
 /**
  * Dialog for editing an existing session.
  */
-public class EditSessionDialog {
+public class EditSessionDialog extends BaseDialog {
     @FXML
     private TextField nameField;
     @FXML
@@ -27,7 +23,6 @@ public class EditSessionDialog {
     @FXML
     private CheckBox queryTransformationCheckBox;
 
-    private final Stage stage;
     private final Session session;
     private boolean confirmed = false;
 
@@ -38,45 +33,23 @@ public class EditSessionDialog {
      * @param owner   the owner window
      */
     public EditSessionDialog(Session session, Stage owner) {
+        super(owner, "Edit Session", "/dev/ragent/session_dialog.fxml");
         this.session = session;
-        this.stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.initOwner(owner);
-        stage.setTitle("Edit Session");
-        stage.setResizable(false);
 
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/dev/ragent/session_dialog.fxml"));
-            loader.setController(this);
-            Scene scene = new Scene(loader.load());
-            scene.getStylesheets().add(getClass().getResource("/dev/ragent/styles/index.css").toExternalForm());
+        nameField.setText(session.getName());
 
-            // Apply theme
-            if (dev.ragent.service.PreferencesService.getInstance().isDarkMode()) {
-                scene.getRoot().getStyleClass().add("dark-theme");
-            }
+        List<String> availableModels = ModelComboBoxHelper.configureModelComboBox(modelComboBox);
+        ModelComboBoxHelper.setModelOrFallback(modelComboBox, session.getModel(), availableModels);
 
-            stage.setScene(scene);
+        queryTransformationCheckBox.setSelected(session.isUseQueryTransformation());
 
-            // Initialize fields with session data
-            nameField.setText(session.getName());
-            modelComboBox.getItems().addAll(Constants.AVAILABLE_MODELS);
-            modelComboBox.setValue(session.getModel());
-            queryTransformationCheckBox.setSelected(session.isUseQueryTransformation());
+        Button okBtn = (Button) stage.getScene().lookup("#okButton");
+        okBtn.setText("Save");
 
-            // Configure button for edit mode
-            Button okBtn = (Button) scene.lookup("#okButton");
-            okBtn.setText("Save");
-
-            // Disable OK button if name is empty
-            nameField.textProperty().addListener((observable, oldValue, newValue) -> {
-                okBtn.setDisable(newValue.trim().isEmpty());
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to load edit session dialog", e);
-        }
+        // Disable OK button if name is empty
+        nameField.textProperty().addListener((observable, oldValue, newValue) -> {
+            okBtn.setDisable(newValue.trim().isEmpty());
+        });
     }
 
     /**
@@ -85,21 +58,21 @@ public class EditSessionDialog {
      * @return true if the user clicked OK and the session was updated, false
      *         otherwise
      */
-    public boolean showAndWait() {
-        stage.showAndWait();
+    public boolean showAndWaitForResult() {
+        super.showAndWait();
         return confirmed && updateSession();
     }
 
     @FXML
     private void handleOk() {
         confirmed = true;
-        stage.close();
+        close();
     }
 
     @FXML
     private void handleCancel() {
         confirmed = false;
-        stage.close();
+        close();
     }
 
     /**

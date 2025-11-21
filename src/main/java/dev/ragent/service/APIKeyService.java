@@ -3,19 +3,23 @@ package dev.ragent.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import io.github.cdimascio.dotenv.Dotenv;
-import javafx.scene.control.TextInputDialog;
 
 /**
- * Singleton service for managing OpenAI API key configuration
+ * Singleton service for managing API key configuration for multiple providers
  */
 public class APIKeyService {
 
     private static final Logger logger = LogManager.getLogger(APIKeyService.class);
-    private static final String ENV_KEY = "OPENAI_API_KEY";
+    private static final String OPENAI_ENV_KEY = "OPENAI_API_KEY";
+    private static final String GROQ_ENV_KEY = "GROQ_API_KEY";
+    private static final String GEMINI_ENV_KEY = "GEMINI_API_KEY";
     private static APIKeyService instance;
 
-    private String apiKey;
+    private String openaiApiKey;
+    private String groqApiKey;
+    private String geminiApiKey;
 
     /**
      * Private constructor to prevent instantiation
@@ -36,20 +40,30 @@ public class APIKeyService {
     }
 
     /**
-     * Load API key from .env file or prompt user if not found
+     * Load API keys from .env file
      * 
-     * @return true if API key was successfully loaded, false otherwise
+     * @return true if at least one API key was successfully loaded, false otherwise
      */
     public boolean loadApiKey() {
         // Try to load from .env file
-        apiKey = loadFromEnv();
+        openaiApiKey = loadFromEnv(OPENAI_ENV_KEY);
+        groqApiKey = loadFromEnv(GROQ_ENV_KEY);
+        geminiApiKey = loadFromEnv(GEMINI_ENV_KEY);
 
-        // If no API key found, prompt user
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            logger.info("No API key found in .env, prompting user");
-            return promptForApiKey();
+        boolean hasOpenAI = openaiApiKey != null && !openaiApiKey.trim().isEmpty();
+        boolean hasGroq = groqApiKey != null && !groqApiKey.trim().isEmpty();
+        boolean hasGemini = geminiApiKey != null && !geminiApiKey.trim().isEmpty();
+
+        if (!hasOpenAI && !hasGroq && !hasGemini) {
+            logger.error("No API keys found in .env file");
+            return false;
         } else {
-            logger.info("API key loaded from .env file");
+            if (hasOpenAI)
+                logger.info("OpenAI API key loaded from .env file");
+            if (hasGroq)
+                logger.info("Groq API key loaded from .env file");
+            if (hasGemini)
+                logger.info("Gemini API key loaded from .env file");
             return true;
         }
     }
@@ -57,14 +71,15 @@ public class APIKeyService {
     /**
      * Load API key from .env file
      * 
+     * @param envKey the environment variable key
      * @return API key or null if not found
      */
-    private String loadFromEnv() {
+    private String loadFromEnv(String envKey) {
         try {
             Dotenv dotenv = Dotenv.configure()
                     .ignoreIfMissing()
                     .load();
-            String key = dotenv.get(ENV_KEY);
+            String key = dotenv.get(envKey);
             if (key != null && !key.trim().isEmpty()) {
                 return key;
             }
@@ -75,67 +90,88 @@ public class APIKeyService {
     }
 
     /**
-     * Prompt user for API key
+     * Get the API key for a specific provider
      * 
-     * @return true if user provided a key, false otherwise
-     */
-    private boolean promptForApiKey() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("OpenAI API Key");
-        dialog.setHeaderText("Enter your OpenAI API Key");
-        dialog.setContentText("API Key:");
-
-        dialog.showAndWait().ifPresent(key -> {
-            this.apiKey = key;
-            logger.info("API key provided by user");
-        });
-
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            logger.warn("No API key provided");
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Get the API key
-     * 
+     * @param provider the provider name ("openai", "groq", or "gemini")
      * @return API key or null if not loaded
      */
-    public String getApiKey() {
-        return apiKey;
+    public String getApiKey(String provider) {
+        if ("groq".equalsIgnoreCase(provider)) {
+            return groqApiKey;
+        } else if ("gemini".equalsIgnoreCase(provider)) {
+            return geminiApiKey;
+        }
+        return openaiApiKey; // default to openai
     }
 
     /**
-     * Check if API key is available
+     * Get the OpenAI API key (for backward compatibility)
+     * 
+     * @return OpenAI API key or null if not loaded
+     */
+    public String getApiKey() {
+        return openaiApiKey;
+    }
+
+    /**
+     * Check if API key is available for a specific provider
+     * 
+     * @param provider the provider name ("openai" or "groq")
+     * @return true if API key is available, false otherwise
+     */
+    public boolean hasApiKey(String provider) {
+        String key = getApiKey(provider);
+        return key != null && !key.trim().isEmpty();
+    }
+
+    /**
+     * Check if OpenAI API key is available (for backward compatibility)
      * 
      * @return true if API key is available, false otherwise
      */
     public boolean hasApiKey() {
-        return apiKey != null && !apiKey.trim().isEmpty();
+        return openaiApiKey != null && !openaiApiKey.trim().isEmpty();
     }
 
     /**
-     * Set API key manually
+     * Set API key manually for a specific provider
+     * 
+     * @param provider the provider name ("openai", "groq", or "gemini")
+     * @param apiKey   the API key to set
+     */
+    public void setApiKey(String provider, String apiKey) {
+        if ("groq".equalsIgnoreCase(provider)) {
+            this.groqApiKey = apiKey;
+        } else if ("gemini".equalsIgnoreCase(provider)) {
+            this.geminiApiKey = apiKey;
+        } else {
+            this.openaiApiKey = apiKey;
+        }
+        logger.info("API key manually set for provider: {}", provider);
+    }
+
+    /**
+     * Set OpenAI API key manually (for backward compatibility)
      * 
      * @param apiKey the API key to set
      */
     public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+        this.openaiApiKey = apiKey;
         logger.info("API key set manually");
     }
 
     /**
-     * Clear the API key
+     * Clear all API keys
      */
     public void clearApiKey() {
-        this.apiKey = null;
-        logger.info("API key cleared");
+        this.openaiApiKey = null;
+        this.groqApiKey = null;
+        this.geminiApiKey = null;
+        logger.info("API keys cleared");
     }
 
     /**
-     * Validate the API key by making a test request to OpenAI
+     * Validate the OpenAI API key by making a test request
      * 
      * @return true if the API key is valid, false otherwise
      */
@@ -148,7 +184,7 @@ public class APIKeyService {
             // Make a minimal test request to validate the key
             dev.langchain4j.model.openai.OpenAiChatModel testModel = dev.langchain4j.model.openai.OpenAiChatModel
                     .builder()
-                    .apiKey(apiKey)
+                    .apiKey(openaiApiKey)
                     .modelName("gpt-4o-mini")
                     .maxTokens(1)
                     .build();
@@ -175,7 +211,7 @@ public class APIKeyService {
         }
 
         try {
-            dev.langchain4j.model.openai.OpenAiChatModel testModel = dev.langchain4j.model.openai.OpenAiChatModel
+            OpenAiChatModel testModel = OpenAiChatModel
                     .builder()
                     .apiKey(keyToValidate)
                     .modelName("gpt-4o-mini")

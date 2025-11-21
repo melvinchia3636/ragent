@@ -1,6 +1,7 @@
 package dev.ragent.model;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Represents a chat message in the session
@@ -13,11 +14,11 @@ public class ChatMessage {
     private final String sources; // Optional sources for AI messages
 
     public ChatMessage(String content, boolean isUser) {
-        this(java.util.UUID.randomUUID().toString(), content, isUser, LocalDateTime.now(), null);
+        this(UUID.randomUUID().toString(), content, isUser, LocalDateTime.now(), null);
     }
 
     public ChatMessage(String content, boolean isUser, String sources) {
-        this(java.util.UUID.randomUUID().toString(), content, isUser, LocalDateTime.now(), sources);
+        this(UUID.randomUUID().toString(), content, isUser, LocalDateTime.now(), sources);
     }
 
     public ChatMessage(String id, String content, boolean isUser, LocalDateTime timestamp, String sources) {

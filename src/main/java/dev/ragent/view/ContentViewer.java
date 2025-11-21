@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import dev.ragent.controller.ContentViewerController;
 import dev.ragent.model.Resource;
+import dev.ragent.service.PreferencesService;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -40,7 +41,7 @@ public class ContentViewer {
         Scene scene = new Scene(root, 700, 600);
 
         // Apply theme
-        if (dev.ragent.service.PreferencesService.getInstance().isDarkMode()) {
+        if (PreferencesService.getInstance().isDarkMode()) {
             scene.getRoot().getStyleClass().add("dark-theme");
         }
 

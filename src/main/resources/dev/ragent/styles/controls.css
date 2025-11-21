@@ -32,6 +32,7 @@
   -fx-background-color: -color-text-light;
 }
 
+.combo-box {
   -fx-background-color: -color-bg-primary;
   -fx-background-radius: 4;
   -fx-border-color: -color-border;
@@ -50,6 +51,14 @@
   -fx-padding: 8 12;
 }
 
+.combo-box .arrow-button {
+  -fx-background-color: transparent !important;
+}
+
+.combo-box .arrow {
+  -fx-background-color: -color-text-primary;
+}
+
 .text-field {
   -fx-background-color: -color-bg-primary;
   -fx-background-insets: 0;
@@ -66,9 +75,20 @@
   -fx-border-width: 2;
 }
 
+/* Progress Bar Styling */
 .progress-bar {
-  -fx-background-color: -color-border;
+  -fx-background-color: -color-bg-primary;
+  -fx-border-color: -color-border;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
   -fx-background-radius: 4;
+  -fx-pref-height: 8;
+}
+
+.progress-bar .track {
+  -fx-background-color: -color-bg-primary;
+  -fx-background-radius: 4;
+  -fx-background-insets: 0;
 }
 
 .progress-bar .bar {

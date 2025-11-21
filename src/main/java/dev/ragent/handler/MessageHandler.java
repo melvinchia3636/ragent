@@ -1,5 +1,8 @@
 package dev.ragent.handler;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -109,7 +112,7 @@ public class MessageHandler {
             try {
                 ragService.queryStreaming(finalUserMessage, new RAGService.StreamingCallback() {
                     private final StringBuilder responseBuilder = new StringBuilder();
-                    private java.util.List<String> sources = new java.util.ArrayList<>();
+                    private List<String> sources = new ArrayList<>();
 
                     @Override
                     public void onProgress(String progressMessage) {
@@ -120,7 +123,7 @@ public class MessageHandler {
                     }
 
                     @Override
-                    public void onStart(java.util.List<String> sourceDocs) {
+                    public void onStart(List<String> sourceDocs) {
                         sources = sourceDocs;
                     }
 

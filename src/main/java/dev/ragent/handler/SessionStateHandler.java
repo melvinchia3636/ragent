@@ -9,10 +9,13 @@ import dev.ragent.service.APIKeyService;
 import dev.ragent.service.DatabaseService;
 import dev.ragent.service.RAGService;
 import dev.ragent.service.ResourceService;
+import dev.ragent.util.Constants;
+import dev.ragent.view.AlertHelper;
 import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 
 /**
  * Handles session state management including selection, updates, and UI state.
@@ -21,6 +24,7 @@ public class SessionStateHandler {
 
     private static final Logger logger = LogManager.getLogger(SessionStateHandler.class);
 
+    private final HBox sessionHeader;
     private final Label sessionNameLabel;
     private final Label sessionCreatedLabel;
     private final Label modelLabel;
@@ -34,6 +38,7 @@ public class SessionStateHandler {
     private RAGService ragService;
 
     public SessionStateHandler(
+            HBox sessionHeader,
             Label sessionNameLabel,
             Label sessionCreatedLabel,
             Label modelLabel,
@@ -41,6 +46,7 @@ public class SessionStateHandler {
             Button clearSessionButton,
             TextArea messageInput,
             Button sendButton) {
+        this.sessionHeader = sessionHeader;
         this.sessionNameLabel = sessionNameLabel;
         this.sessionCreatedLabel = sessionCreatedLabel;
         this.modelLabel = modelLabel;
@@ -59,11 +65,31 @@ public class SessionStateHandler {
 
     /**
      * Set the current session.
+     * 
+     * @param session the session to set
+     * @return true if session was set successfully, false if API key is missing
      */
-    public void setCurrentSession(Session session) {
+    public boolean setCurrentSession(Session session) {
         if (session != null) {
             logger.info("Setting current session: id={}, name='{}', model={}, queryTransformation={}",
                     session.getId(), session.getName(), session.getModel(), session.isUseQueryTransformation());
+
+            // Check if API key for the session's model provider is available
+            String provider = Constants.getProvider(session.getModel());
+            if (!APIKeyService.getInstance().hasApiKey(provider)) {
+                logger.warn("API key for provider '{}' not available, cannot set session", provider);
+                AlertHelper.showError(
+                        "API Key Missing",
+                        "Cannot Load Session",
+                        "The API key for " + provider.toUpperCase() + " is not configured. " +
+                                "Please add the " + provider.toUpperCase() + "_API_KEY to your .env file.");
+                // Clear session since we can't use it
+                this.currentSession = null;
+                this.resourceService = null;
+                this.ragService = null;
+                updateSessionInfoDisplay(null);
+                return false;
+            }
         } else {
             logger.info("Clearing current session");
         }
@@ -73,19 +99,21 @@ public class SessionStateHandler {
             this.resourceService = new ResourceService(session.getId());
             logger.debug("Initialized ResourceService for session: {}", session.getId());
 
-            if (APIKeyService.getInstance().hasApiKey()) {
+            String provider = Constants.getProvider(session.getModel());
+            if (APIKeyService.getInstance().hasApiKey(provider)) {
                 this.ragService = new RAGService(session.getId(), session.getModel(),
                         session.isUseQueryTransformation());
                 logger.info("Initialized RAGService with model={}, queryTransformation={}",
                         session.getModel(), session.isUseQueryTransformation());
             } else {
-                logger.warn("API key not available, RAGService not initialized");
+                logger.warn("API key for provider '{}' not available, RAGService not initialized", provider);
             }
         } else {
             this.resourceService = null;
             this.ragService = null;
             logger.debug("Cleared ResourceService and RAGService");
         }
+        return true;
     }
 
     /**
@@ -208,6 +236,8 @@ public class SessionStateHandler {
                     : "disabled";
             modelLabel.setText(session.getModel() + " (query transformation " + queryTransformationStatus + ")");
 
+            sessionHeader.setVisible(true);
+            sessionHeader.setManaged(true);
             manageKnowledgebaseButton.setVisible(true);
             manageKnowledgebaseButton.setManaged(true);
             clearSessionButton.setVisible(true);
@@ -226,7 +256,9 @@ public class SessionStateHandler {
 
             sessionNameLabel.setText("No Session Selected");
             sessionCreatedLabel.setText("");
-            modelLabel.setText("");
+            modelLabel.setText("N/A");
+            sessionHeader.setVisible(false);
+            sessionHeader.setManaged(false);
             manageKnowledgebaseButton.setVisible(false);
             manageKnowledgebaseButton.setManaged(false);
             clearSessionButton.setVisible(false);

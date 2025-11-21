@@ -12,6 +12,8 @@ import dev.ragent.view.SessionSidebar;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /**
@@ -37,6 +39,7 @@ public class ChatSessionController {
     private final KnowledgebaseHandler knowledgebaseHandler;
 
     public ChatSessionController(
+            HBox sessionHeader,
             Label sessionNameLabel,
             Label sessionCreatedLabel,
             VBox chatContainer,
@@ -52,6 +55,7 @@ public class ChatSessionController {
         this.sessionSidebar = sessionSidebar;
 
         this.sessionStateHandler = new SessionStateHandler(
+                sessionHeader,
                 sessionNameLabel,
                 sessionCreatedLabel,
                 modelLabel,
@@ -82,7 +86,7 @@ public class ChatSessionController {
         // send
         messageInput.setOnKeyPressed(event -> {
             if ((event.isShortcutDown() || event.isControlDown())
-                    && event.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                    && event.getCode() == KeyCode.ENTER) {
                 event.consume();
                 handleSendMessage();
             }
@@ -127,7 +131,15 @@ public class ChatSessionController {
      */
     public void handleSessionSelected(Session session) {
         logger.info("Session selected: {}", session.getName());
-        sessionStateHandler.setCurrentSession(session);
+        boolean success = sessionStateHandler.setCurrentSession(session);
+
+        if (!success) {
+            // API key was missing, clear the sidebar selection and chat area
+            sessionSidebar.clearCurrentSession();
+            chatHistoryHandler.clearChatContainer();
+            return;
+        }
+
         sessionStateHandler.updateSessionInfoDisplay(session);
         knowledgebaseHandler.initializeSession();
     }

@@ -6,6 +6,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /**
@@ -19,8 +20,8 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         primaryStage = stage;
-        double screenWidth = javafx.stage.Screen.getPrimary().getBounds().getWidth();
-        double screenHeight = javafx.stage.Screen.getPrimary().getBounds().getHeight();
+        double screenWidth = Screen.getPrimary().getBounds().getWidth();
+        double screenHeight = Screen.getPrimary().getBounds().getHeight();
 
         // Make it so that there is a little bit of margin around the app window
         scene = new Scene(loadFXML("main"), screenWidth * 0.8, screenHeight * 0.8);

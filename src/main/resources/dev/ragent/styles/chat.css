@@ -113,3 +113,23 @@
   -fx-min-width: 40;
   -fx-min-height: 40;
 }
+
+.chat-placeholder-icon {
+  -fx-opacity: 0.3;
+}
+
+.chat-placeholder-title {
+  -fx-font-family: "Space Grotesk Bold";
+  -fx-font-size: 48;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-muted;
+  -fx-opacity: 0.3;
+  -fx-padding: 40 0 0 0;
+}
+
+.chat-placeholder-subtitle {
+  -fx-font-family: "Space Grotesk Normal";
+  -fx-font-size: 18;
+  -fx-text-fill: -color-text-muted;
+  -fx-opacity: 0.3;
+}

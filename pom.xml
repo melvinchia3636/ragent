@@ -117,6 +117,32 @@
                             <mainClass>dev.ragent.App</mainClass>
                         </configuration>
                     </execution>
+                    <execution>
+                        <!-- Test configuration for visual tests -->
+                        <!-- Usage: mvn test-compile javafx:run@test -->
+                        <id>test</id>
+                        <configuration>
+                            <mainClass>dev.ragent.view.AlertHelperVisualTest</mainClass>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>visual-test</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>dev.ragent.view.AlertHelperVisualTest</mainClass>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

@@ -67,5 +67,115 @@
 
 .dialog-content .progress-bar {
   -fx-pref-width: 400;
-  -fx-pref-height: 8;
+  -fx-pref-height: 12;
+}
+
+/* Model selector styling */
+.model-provider-label {
+  -fx-font-size: 12;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-muted;
+  -fx-min-width: 60;
+  -fx-alignment: center-left;
+}
+
+.model-name-label {
+  -fx-font-size: 14;
+  -fx-text-fill: -color-text-primary;
+  -fx-alignment: center-left;
+}
+
+.dialog-title {
+  -fx-font-size: 16;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-primary;
+  -fx-padding: 0 0 16 0;
+}
+
+/* ============================================
+   ALERT DIALOGS
+   ============================================ */
+.alert-dialog {
+  -fx-background-color: -color-bg-secondary;
+}
+
+.alert-dialog .header-panel {
+  -fx-background-color: -color-bg-secondary;
+  -fx-padding: 20 20 10 20;
+}
+
+.alert-dialog .header-panel .label {
+  -fx-font-size: 16;
+  -fx-font-weight: bold;
+  -fx-text-fill: -color-text-primary;
+}
+
+.alert-dialog .content {
+  -fx-background-color: -color-bg-secondary;
+  -fx-padding: 10 20 20 20;
+}
+
+.alert-dialog .content .label {
+  -fx-font-size: 14;
+  -fx-text-fill: -color-text-primary;
+  -fx-wrap-text: true;
+}
+
+.alert-dialog.no-header .content {
+  -fx-padding: 22 22 22 0;
+}
+
+.alert-dialog .button-bar {
+  -fx-background-color: -color-bg-secondary;
+  -fx-padding: 10 20 20 20;
+}
+
+.alert-dialog .graphic-container {
+  -fx-padding: 0 20 0 20;
+}
+
+/* When there's no header, center the icon vertically with the content */
+.alert-dialog.no-header .graphic-container {
+  -fx-padding: 20 20 0 20;
+  -fx-alignment: center-left;
+}
+
+.alert-dialog .graphic-container .icon * {
+  -fx-stroke: -color-text-primary;
+}
+
+/* Error Alert Icon - Red */
+.alert-dialog.error .graphic-container .icon * {
+  -fx-stroke: #ff4444;
+}
+
+:root.dark-theme .alert-dialog.error .graphic-container .icon * {
+  -fx-stroke: #ff6b6b;
+}
+
+/* Warning Alert Icon - Orange/Yellow */
+.alert-dialog.warning .graphic-container .icon * {
+  -fx-stroke: #ff9800;
+}
+
+:root.dark-theme .alert-dialog.warning .graphic-container .icon * {
+  -fx-stroke: #ffa726;
+}
+
+/* Information Alert Icon - Blue */
+.alert-dialog.information .graphic-container .icon * {
+  -fx-stroke: #2196f3;
+}
+
+:root.dark-theme .alert-dialog.information .graphic-container .icon * {
+  -fx-stroke: #42a5f5;
+}
+
+/* Confirmation Alert Icon - Purple/Primary */
+.alert-dialog.confirmation .graphic-container .icon * {
+  -fx-stroke: -color-text-primary;
+}
+
+:root.dark-theme .alert-dialog.confirmation .graphic-container .icon * {
+  -fx-stroke: -color-text-primary;
 }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1"
+    styleClass="dialog-content">
+
+    <VBox>
+        <Label fx:id="headerLabel" styleClass="dialog-header" />
+    </VBox>
+
+    <VBox>
+        <Label text="This will permanently delete the session and all its knowledgebase files."
+            styleClass="dialog-label" wrapText="true" />
+        <Label text="To confirm, please type the session name below:" styleClass="dialog-label"
+            wrapText="true" />
+        <TextField fx:id="confirmationField" promptText="Enter session name" />
+    </VBox>
+
+    <HBox styleClass="button-container">
+        <Button fx:id="cancelButton" text="Cancel" styleClass="secondary-btn"
+            onAction="#handleCancel" />
+        <Button fx:id="okButton" text="Delete" styleClass="dangerous-primary-btn"
+            onAction="#handleOk" />
+    </HBox>
+</VBox>

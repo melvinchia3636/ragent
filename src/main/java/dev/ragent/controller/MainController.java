@@ -6,12 +6,14 @@ import dev.ragent.service.PreferencesService;
 import dev.ragent.util.Icon;
 import dev.ragent.view.AlertHelper;
 import dev.ragent.view.SessionSidebar;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 public class MainController {
@@ -21,6 +23,9 @@ public class MainController {
 
     @FXML
     private SessionSidebar sessionSidebar;
+
+    @FXML
+    private HBox sessionHeader;
 
     @FXML
     private Label sessionNameLabel;
@@ -56,16 +61,7 @@ public class MainController {
 
     @FXML
     private void initialize() {
-        // Add icons to buttons
-        clearSessionButton.setGraphic(
-                Icon.load("tabler--trash-x.svg"));
-        manageKnowledgebaseButton.setGraphic(
-                Icon.load("tabler--database-cog.svg"));
-        sendButton.setGraphic(
-                Icon.load("tabler--arrow-up.svg"));
-        sendButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        modelLabel.setGraphic(
-                Icon.load("tabler--robot.svg"));
+        initializeIcons();
 
         // Initialize database
         DatabaseService databaseService = DatabaseService.getInstance();
@@ -87,41 +83,11 @@ public class MainController {
             return;
         }
 
-        // Initialize API key service and load key
-        APIKeyService apiKeyService = APIKeyService.getInstance();
-        boolean hasApiKey = apiKeyService.loadApiKey();
-
-        // Update status based on API key availability and validity
-        if (hasApiKey) {
-            statusLabel.setText("Validating API Key...");
-
-            // Validate API key in background thread
-            new Thread(() -> {
-                boolean isValid = apiKeyService.validateApiKey();
-
-                javafx.application.Platform.runLater(() -> {
-                    if (isValid) {
-                        statusLabel.setText("API Key validated successfully");
-                    } else {
-                        statusLabel.setText("Invalid API Key - Chat disabled");
-                        sendButton.setDisable(true);
-                        messageInput.setDisable(true);
-
-                        AlertHelper.showError(
-                                "Invalid API Key",
-                                "API Key Validation Failed",
-                                "The provided OpenAI API key is invalid. Please check your .env file or provide a valid key.");
-                    }
-                });
-            }).start();
-        } else {
-            statusLabel.setText("No API Key - Chat disabled");
-            sendButton.setDisable(true);
-            messageInput.setDisable(true);
-        }
+        initializeAPIKeys();
 
         // Initialize chat session controller
         chatSessionController = new ChatSessionController(
+                sessionHeader,
                 sessionNameLabel,
                 sessionCreatedLabel,
                 chatContainer,
@@ -137,7 +103,6 @@ public class MainController {
         sessionSidebar.setOnSessionSelected(chatSessionController::handleSessionSelected);
         sessionSidebar.setOnSessionChanged(chatSessionController::handleSessionChanged);
 
-        // Load sessions
         sessionSidebar.loadSessions();
 
         // Initialize theme when scene is available
@@ -151,10 +116,65 @@ public class MainController {
             });
         }
 
-        // Set up auto-scroll for chat
+        // Auto-scroll chat to bottom on new messages
         chatContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
             chatScrollPane.setVvalue(1.0);
         });
+    }
+
+    private void initializeAPIKeys() {
+        // Initialize API key service and load key
+        APIKeyService apiKeyService = APIKeyService.getInstance();
+        boolean hasApiKey = apiKeyService.loadApiKey();
+
+        // Exit application if no API key found
+        if (!hasApiKey) {
+            AlertHelper.showError(
+                    "Missing API Key",
+                    "OpenAI API Key Not Found",
+                    "No OPENAI_API_KEY found in .env file.\n\n" +
+                            "Please create a .env file in the project root directory with:\n" +
+                            "OPENAI_API_KEY=your-api-key-here\n\n" +
+                            "The application will now exit.");
+
+            Platform.exit();
+            return;
+        }
+
+        // Validate API key in background thread
+        statusLabel.setText("Validating API Key...");
+        new Thread(() -> {
+            boolean isValid = apiKeyService.validateApiKey();
+
+            Platform.runLater(() -> {
+                if (isValid) {
+                    statusLabel.setText("API Key validated successfully");
+                } else {
+                    statusLabel.setText("Invalid API Key");
+
+                    AlertHelper.showError(
+                            "Invalid API Key",
+                            "API Key Validation Failed",
+                            "The OPENAI_API_KEY in your .env file is invalid.\n\n" +
+                                    "Please check your .env file and ensure it contains a valid OpenAI API key.\n\n" +
+                                    "The application will now exit.");
+
+                    Platform.exit();
+                }
+            });
+        }).start();
+    }
+
+    private void initializeIcons() {
+        clearSessionButton.setGraphic(
+                Icon.load("tabler--trash-x.svg"));
+        manageKnowledgebaseButton.setGraphic(
+                Icon.load("tabler--database-cog.svg"));
+        sendButton.setGraphic(
+                Icon.load("tabler--arrow-up.svg"));
+        sendButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        modelLabel.setGraphic(
+                Icon.load("tabler--robot.svg"));
     }
 
     private void initializeTheme() {

@@ -25,7 +25,8 @@
       <dev.ragent.view.SessionSidebar fx:id="sessionSidebar"
          SplitPane.resizableWithParent="false" />
       <VBox fx:id="chatContainerWrapper" prefHeight="-1.0" prefWidth="-1.0">
-         <HBox id="sessionHeader" alignment="CENTER" fx:id="sessionHeader" spacing="10.0">
+         <HBox id="sessionHeader" alignment="CENTER" fx:id="sessionHeader" spacing="10.0"
+            visible="false" managed="false">
             <VBox HBox.hgrow="ALWAYS" fx:id="sessionInfoContainer">
                <Label fx:id="sessionNameLabel" text="No Session Selected"
                   styleClass="session-title" />

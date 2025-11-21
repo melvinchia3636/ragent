@@ -28,6 +28,7 @@
   -color-text-muted: #909090;
   -color-text-light: #fafafc;
   -color-danger: #ff4444;
+  -color-danger-hover: #ff2222;
   -color-hover: #f5f7f9;
   -color-selected: #edf1f5;
   -color-scrollbar: #d0d0d0;
@@ -46,6 +47,7 @@
   -color-text-muted: #787b82ff;
   -color-text-light: #282a2c;
   -color-danger: #ff6b6b;
+  -color-danger-hover: #ff4c4cff;
   -color-hover: #2c2e33;
   -color-selected: #373a40;
   -color-scrollbar: #5c5f66;
